@@ -4,8 +4,16 @@ import 'package:flutter/material.dart';
 class Keyword {
   final String id;
   final String label;
+  final String emoji;
   final String category;
-  const Keyword({required this.id, required this.label, required this.category});
+  final double size; // 버블 상대적 크기 (0.8 ~ 1.4)
+  const Keyword({
+    required this.id,
+    required this.label,
+    required this.emoji,
+    required this.category,
+    this.size = 1.0,
+  });
 }
 
 // ─────────────────────────── Difficulty ──────────────────────────────────────
@@ -13,24 +21,24 @@ enum Difficulty { easy, medium, hard }
 
 extension DifficultyX on Difficulty {
   String get label => switch (this) {
-    Difficulty.easy   => '쉬움',
+    Difficulty.easy => '쉬움',
     Difficulty.medium => '보통',
-    Difficulty.hard   => '어려움',
+    Difficulty.hard => '어려움',
   };
   int get points => switch (this) {
-    Difficulty.easy   => 30,
+    Difficulty.easy => 30,
     Difficulty.medium => 70,
-    Difficulty.hard   => 150,
+    Difficulty.hard => 150,
   };
   Color get color => switch (this) {
-    Difficulty.easy   => const Color(0xFF1D9E75),
+    Difficulty.easy => const Color(0xFF1D9E75),
     Difficulty.medium => const Color(0xFFBA7517),
-    Difficulty.hard   => const Color(0xFFD85A30),
+    Difficulty.hard => const Color(0xFFD85A30),
   };
   String get emoji => switch (this) {
-    Difficulty.easy   => '🌿',
+    Difficulty.easy => '🌿',
     Difficulty.medium => '⚡',
-    Difficulty.hard   => '🔥',
+    Difficulty.hard => '🔥',
   };
 }
 
@@ -41,9 +49,9 @@ class Experience {
   final String subtitle;
   final List<String> matchedKeywords;
   final Difficulty difficulty;
-  final int energy;   // 1–3
-  final int courage;  // 1–3
-  final int cost;     // 1–3
+  final int energy;
+  final int courage;
+  final int cost;
   final bool isFit;
 
   const Experience({
@@ -65,7 +73,7 @@ class DecoItem {
   final String name;
   final String emoji;
   final int cost;
-  final String slot; // 'background' | 'object' | 'badge'
+  final String slot;
   final String hint;
 
   const DecoItem({
@@ -113,25 +121,41 @@ class AppState {
   int get xpInLevel => totalEarned % 100;
 }
 
-// ─────────────────────────── Sample Data ─────────────────────────────────────
+// ─────────────────────────── Keywords (30개) ─────────────────────────────────
 final List<Keyword> allKeywords = [
-  const Keyword(id: 'k01', label: '혼자',      category: 'social'),
-  const Keyword(id: 'k02', label: '함께',      category: 'social'),
-  const Keyword(id: 'k03', label: '새벽',      category: 'time'),
-  const Keyword(id: 'k04', label: '낮',        category: 'time'),
-  const Keyword(id: 'k05', label: '저녁',      category: 'time'),
-  const Keyword(id: 'k06', label: '느린',      category: 'mood'),
-  const Keyword(id: 'k07', label: '빠른',      category: 'mood'),
-  const Keyword(id: 'k08', label: '감성적',    category: 'mood'),
-  const Keyword(id: 'k09', label: '도전적',    category: 'mood'),
-  const Keyword(id: 'k10', label: '낯선 곳',   category: 'place'),
-  const Keyword(id: 'k11', label: '도심',      category: 'place'),
-  const Keyword(id: 'k12', label: '자연',      category: 'place'),
-  const Keyword(id: 'k13', label: '몸쓰는',    category: 'intensity'),
-  const Keyword(id: 'k14', label: '조용한',    category: 'intensity'),
-  const Keyword(id: 'k15', label: '소란스러운', category: 'intensity'),
+  const Keyword(id: 'k01', label: '느린',        emoji: '🐌', category: 'mood',      size: 1.0),
+  const Keyword(id: 'k02', label: '감성적',      emoji: '🎨', category: 'mood',      size: 1.2),
+  const Keyword(id: 'k03', label: '조용한',      emoji: '🤫', category: 'mood',      size: 1.0),
+  const Keyword(id: 'k04', label: '설레는',      emoji: '💫', category: 'mood',      size: 1.1),
+  const Keyword(id: 'k05', label: '몽환적',      emoji: '🌫️', category: 'mood',      size: 0.9),
+  const Keyword(id: 'k06', label: '빠른',        emoji: '⚡', category: 'mood',      size: 0.85),
+  const Keyword(id: 'k07', label: '새벽',        emoji: '🌙', category: 'time',      size: 1.15),
+  const Keyword(id: 'k08', label: '이른 아침',   emoji: '🌅', category: 'time',      size: 1.3),
+  const Keyword(id: 'k09', label: '낮',          emoji: '☀️', category: 'time',      size: 0.9),
+  const Keyword(id: 'k10', label: '저녁',        emoji: '🌆', category: 'time',      size: 1.0),
+  const Keyword(id: 'k11', label: '주말',        emoji: '📅', category: 'time',      size: 1.1),
+  const Keyword(id: 'k12', label: '낯선 곳',    emoji: '🗺️', category: 'place',     size: 1.25),
+  const Keyword(id: 'k13', label: '도심',        emoji: '🏙️', category: 'place',     size: 1.0),
+  const Keyword(id: 'k14', label: '자연',        emoji: '🌿', category: 'place',     size: 1.2),
+  const Keyword(id: 'k15', label: '카페',        emoji: '☕', category: 'place',     size: 0.9),
+  const Keyword(id: 'k16', label: '바닷가',      emoji: '🌊', category: 'place',     size: 1.15),
+  const Keyword(id: 'k17', label: '골목',        emoji: '🏘️', category: 'place',     size: 0.85),
+  const Keyword(id: 'k18', label: '혼자',        emoji: '🚶', category: 'social',    size: 1.1),
+  const Keyword(id: 'k19', label: '함께',        emoji: '👫', category: 'social',    size: 1.1),
+  const Keyword(id: 'k20', label: '소란스러운',  emoji: '🎉', category: 'social',    size: 1.35),
+  const Keyword(id: 'k21', label: '낯선 사람',   emoji: '👤', category: 'social',    size: 1.05),
+  const Keyword(id: 'k22', label: '몸쓰는',      emoji: '🏃', category: 'activity',  size: 1.0),
+  const Keyword(id: 'k23', label: '만들기',      emoji: '🛠️', category: 'activity',  size: 1.1),
+  const Keyword(id: 'k24', label: '먹는',        emoji: '🍜', category: 'activity',  size: 1.2),
+  const Keyword(id: 'k25', label: '걷기',        emoji: '👟', category: 'activity',  size: 0.9),
+  const Keyword(id: 'k26', label: '배우기',      emoji: '📖', category: 'activity',  size: 1.0),
+  const Keyword(id: 'k27', label: '도전적',      emoji: '🔥', category: 'challenge', size: 1.3),
+  const Keyword(id: 'k28', label: '처음 해보는', emoji: '🌱', category: 'challenge', size: 1.4),
+  const Keyword(id: 'k29', label: '무계획',      emoji: '🎲', category: 'challenge', size: 1.0),
+  const Keyword(id: 'k30', label: '두근두근',    emoji: '💓', category: 'challenge', size: 1.15),
 ];
 
+// ─────────────────────────── Sample Experiences ───────────────────────────────
 final List<Experience> allExperiences = [
   const Experience(
     id: 'exp_001', isFit: true,
@@ -150,7 +174,7 @@ final List<Experience> allExperiences = [
   const Experience(
     id: 'exp_003', isFit: true,
     title: '낯선 동네 무작정 내리기',
-    subtitle: '지도 없이 처음 보는 역서 2시간',
+    subtitle: '지도 없이 처음 보는 역에서 2시간',
     matchedKeywords: ['혼자', '낯선 곳', '도전적'],
     difficulty: Difficulty.medium, energy: 1, courage: 3, cost: 1,
   ),
@@ -171,13 +195,13 @@ final List<Experience> allExperiences = [
 ];
 
 final List<DecoItem> allItems = [
-  const DecoItem(id: 'bg_forest', name: '새벽 숲',     emoji: '🌲', cost: 50,  slot: 'background', hint: '자연 경험 완료'),
-  const DecoItem(id: 'bg_city',   name: '도심 야경',   emoji: '🌃', cost: 100, slot: 'background', hint: '도심 경험 3회'),
-  const DecoItem(id: 'bg_ocean',  name: '새벽 바다',   emoji: '🌊', cost: 200, slot: 'background', hint: '어려움 경험 완료'),
-  const DecoItem(id: 'obj_seed',  name: '씨앗',        emoji: '🌱', cost: 0,   slot: 'object',     hint: '첫 경험 완료'),
-  const DecoItem(id: 'obj_mug',   name: '새벽 머그',   emoji: '☕', cost: 30,  slot: 'object',     hint: '새벽 경험 완료'),
-  const DecoItem(id: 'obj_pot',   name: '항아리',      emoji: '🏺', cost: 70,  slot: 'object',     hint: '도자기 클래스 완료'),
-  const DecoItem(id: 'obj_moon',  name: '달',          emoji: '🌙', cost: 100, slot: 'object',     hint: '혼자 경험 5회'),
-  const DecoItem(id: 'badge_brave', name: '용감한 탐험가', emoji: '🦁', cost: 150, slot: 'badge', hint: '어려움 3회'),
-  const DecoItem(id: 'badge_dawn',  name: '새벽을 사는 자', emoji: '🌅', cost: 80, slot: 'badge', hint: '새벽 경험 3회'),
+  const DecoItem(id: 'bg_forest', name: '새벽 숲',       emoji: '🌲', cost: 50,  slot: 'background', hint: '자연 경험 완료'),
+  const DecoItem(id: 'bg_city',   name: '도심 야경',     emoji: '🌃', cost: 100, slot: 'background', hint: '도심 경험 3회'),
+  const DecoItem(id: 'bg_ocean',  name: '새벽 바다',     emoji: '🌊', cost: 200, slot: 'background', hint: '어려움 경험 완료'),
+  const DecoItem(id: 'obj_seed',  name: '씨앗',          emoji: '🌱', cost: 0,   slot: 'object',     hint: '첫 경험 완료'),
+  const DecoItem(id: 'obj_mug',   name: '새벽 머그',     emoji: '☕', cost: 30,  slot: 'object',     hint: '새벽 경험 완료'),
+  const DecoItem(id: 'obj_pot',   name: '항아리',        emoji: '🏺', cost: 70,  slot: 'object',     hint: '도자기 클래스 완료'),
+  const DecoItem(id: 'obj_moon',  name: '달',            emoji: '🌙', cost: 100, slot: 'object',     hint: '혼자 경험 5회'),
+  const DecoItem(id: 'badge_brave', name: '용감한 탐험가', emoji: '🦁', cost: 150, slot: 'badge',    hint: '어려움 3회'),
+  const DecoItem(id: 'badge_dawn',  name: '새벽을 사는 자', emoji: '🌅', cost: 80, slot: 'badge',   hint: '새벽 경험 3회'),
 ];

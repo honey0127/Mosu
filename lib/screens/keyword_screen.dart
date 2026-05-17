@@ -29,15 +29,13 @@ class _KeywordScreenState extends State<KeywordScreen> {
       ),
       body: Column(
         children: [
-          // 선택 상태 표시
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
                 Text(
                   '${_selected.length}개 선택됨 (최소 $_minSelect개)',
-                  style:
-                  TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                 ),
                 const Spacer(),
                 if (_selected.isNotEmpty)
@@ -48,8 +46,6 @@ class _KeywordScreenState extends State<KeywordScreen> {
               ],
             ),
           ),
-
-          // 부유하는 키워드 클라우드
           Expanded(
             child: _KeywordCloud(
               keywords: allKeywords,
@@ -57,8 +53,6 @@ class _KeywordScreenState extends State<KeywordScreen> {
               onTap: _toggle,
             ),
           ),
-
-          // 다음 버튼
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -105,9 +99,7 @@ class _KeywordCloud extends StatefulWidget {
   final void Function(String) onTap;
 
   const _KeywordCloud(
-      {required this.keywords,
-        required this.selected,
-        required this.onTap});
+      {required this.keywords, required this.selected, required this.onTap});
 
   @override
   State<_KeywordCloud> createState() => _KeywordCloudState();
@@ -118,19 +110,21 @@ class _KeywordCloudState extends State<_KeywordCloud>
   late final List<AnimationController> _ctrls;
   late final List<Animation<double>> _floats;
 
-  // 15개 키워드의 고정 위치 (화면 너비·높이 대비 비율)
+  // 30개 키워드 위치 (너비·높이 대비 비율)
   static const List<List<double>> _frac = [
-    [0.05, 0.04], [0.45, 0.02], [0.68, 0.07],
-    [0.10, 0.22], [0.48, 0.20], [0.76, 0.18],
-    [0.02, 0.42], [0.36, 0.38], [0.64, 0.36],
-    [0.16, 0.60], [0.50, 0.57], [0.74, 0.55],
-    [0.06, 0.76], [0.40, 0.73], [0.66, 0.70],
+    [0.03, 0.02], [0.38, 0.00], [0.65, 0.03], [0.82, 0.00],
+    [0.08, 0.16], [0.30, 0.14], [0.55, 0.12], [0.75, 0.15],
+    [0.01, 0.30], [0.22, 0.28], [0.46, 0.27], [0.68, 0.30], [0.86, 0.27],
+    [0.10, 0.44], [0.33, 0.42], [0.57, 0.41], [0.78, 0.44],
+    [0.04, 0.57], [0.26, 0.56], [0.50, 0.55], [0.72, 0.57], [0.90, 0.55],
+    [0.12, 0.70], [0.35, 0.69], [0.60, 0.68], [0.80, 0.70],
+    [0.05, 0.83], [0.28, 0.82], [0.53, 0.81], [0.76, 0.83],
   ];
 
   @override
   void initState() {
     super.initState();
-    final rng = Random(42); // 고정 시드 → 매번 같은 속도 패턴
+    final rng = Random(42);
 
     _ctrls = List.generate(widget.keywords.length, (i) {
       final ms = 1600 + rng.nextInt(1200);
@@ -143,9 +137,8 @@ class _KeywordCloudState extends State<_KeywordCloud>
         CurvedAnimation(parent: c, curve: Curves.easeInOut)))
         .toList();
 
-    // 순차적으로 시작해서 전부 동시에 움직이지 않게
     for (var i = 0; i < _ctrls.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 90), () {
+      Future.delayed(Duration(milliseconds: i * 80), () {
         if (mounted) _ctrls[i].repeat(reverse: true);
       });
     }
@@ -168,9 +161,8 @@ class _KeywordCloudState extends State<_KeywordCloud>
           final frac = _frac[i % _frac.length];
           final kw = widget.keywords[i];
           final isSelected = widget.selected.contains(kw.id);
-          // 칩이 화면 밖으로 나가지 않도록 여백 확보
-          final left = (frac[0] * (w - 140)).clamp(0.0, w - 140);
-          final top = (frac[1] * (h - 60)).clamp(0.0, h - 70);
+          final left = (frac[0] * (w - 130)).clamp(0.0, w - 130);
+          final top = (frac[1] * (h - 50)).clamp(0.0, h - 60);
 
           return AnimatedBuilder(
             animation: _floats[i],
@@ -198,9 +190,7 @@ class _KeywordChip extends StatelessWidget {
   final VoidCallback onTap;
 
   const _KeywordChip(
-      {required this.label,
-        required this.isSelected,
-        required this.onTap});
+      {required this.label, required this.isSelected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -209,8 +199,7 @@ class _KeywordChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        padding:
-        const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF7F77DD) : Colors.white,
           borderRadius: BorderRadius.circular(30),
@@ -223,8 +212,8 @@ class _KeywordChip extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? const Color(0xFF7F77DD).withOpacity(0.35)
-                  : Colors.black.withOpacity(0.07),
+                  ? const Color(0xFF7F77DD).withValues(alpha: 0.35)
+                  : Colors.black.withValues(alpha: 0.07),
               blurRadius: isSelected ? 14 : 6,
               offset: const Offset(0, 3),
             ),
@@ -234,9 +223,8 @@ class _KeywordChip extends StatelessWidget {
           label,
           style: TextStyle(
             color: isSelected ? Colors.white : Colors.black87,
-            fontWeight:
-            isSelected ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            fontSize: 13,
           ),
         ),
       ),
