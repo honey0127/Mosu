@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'signup_screen.dart';
@@ -161,7 +162,41 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+
+              // ── 디버그 우회 버튼 (debug 빌드 한정) ─────────────────
+              if (kDebugMode) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                            builder: (_) => const MainShell()),
+                      );
+                    },
+                    icon: const Icon(Icons.bug_report,
+                        size: 16, color: Color(0xFFFFB300)),
+                    label: const Text(
+                      'DEBUG · 로그인 건너뛰기',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF333333),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // ── 로그인 버튼 ────────────────────────────────────────
               SizedBox(
