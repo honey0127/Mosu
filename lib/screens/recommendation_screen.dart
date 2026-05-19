@@ -9,6 +9,13 @@ class RecommendationScreen extends StatelessWidget {
 
   /// 선택한 키워드 기반으로 핏 / 색다른 경험 한 쌍 선택
   (Experience, Experience) _pickPair() {
+    if (selectedKeywordIds.isEmpty) {
+      return (
+        allExperiences.firstWhere((e) => e.isFit),
+        allExperiences.firstWhere((e) => !e.isFit),
+      );
+    }
+
     final selectedLabels = allKeywords
         .where((k) => selectedKeywordIds.contains(k.id))
         .map((k) => k.label)

@@ -1,14 +1,22 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../models/models.dart';
+import 'verify_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  (Experience, Experience) _pickPair() {
+    final fit = allExperiences.firstWhere((e) => e.isFit);
+    final dare = allExperiences.firstWhere((e) => !e.isFit);
+    return (fit, dare);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = AppState.i;
+    final (fitExp, dareExp) = _pickPair();
     final completed =
-    allExperiences.where((e) => state.completedIds.contains(e.id)).toList();
+        allExperiences.where((e) => state.completedIds.contains(e.id)).toList();
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -37,19 +45,16 @@ class HomeScreen extends StatelessWidget {
                           ],
                         ),
                         const Spacer(),
-                        // 포인트 뱃지
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color:
-                            const Color(0xFF7F77DD).withValues(alpha: 0.12),
+                            color: const Color(0xFF7F77DD).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
                             children: [
-                              const Text('⭐',
-                                  style: TextStyle(fontSize: 16)),
+                              const Text('⭐', style: TextStyle(fontSize: 16)),
                               const SizedBox(width: 6),
                               Text('${state.points}P',
                                   style: const TextStyle(
@@ -68,6 +73,42 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+
+            // ── 오늘의 경험 추천 타이틀 ───────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('오늘의 경험 추천',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text('두 가지 경험 중 하나를 선택해봐요',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade500)),
+                  ],
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            // ── 경험 카드 2개 ─────────────────────────────────────────────
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList.separated(
+                itemCount: 2,
+                separatorBuilder: (_, _) => const SizedBox(height: 16),
+                itemBuilder: (_, i) => _ExpCard(
+                  exp: i == 0 ? fitExp : dareExp,
+                  isFit: i == 0,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
             // ── 통계 카드 3개 ─────────────────────────────────────────────
             SliverToBoxAdapter(
@@ -96,38 +137,17 @@ class HomeScreen extends StatelessWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
-            // ── 섹션 타이틀 ───────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Text('완료한 경험',
-                    style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
-
-            // ── 경험 목록 ─────────────────────────────────────────────────
-            if (completed.isEmpty)
-              const SliverToBoxAdapter(
+            // ── 완료한 경험 ───────────────────────────────────────────────
+            if (completed.isNotEmpty) ...[
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.all(48),
-                  child: Column(
-                    children: [
-                      Text('🗺️', style: TextStyle(fontSize: 52)),
-                      SizedBox(height: 12),
-                      Text('아직 탐험을 시작하지 않았어요',
-                          style: TextStyle(color: Colors.grey)),
-                      SizedBox(height: 4),
-                      Text('하단 탐험 시작 버튼을 눌러봐요!',
-                          style:
-                          TextStyle(color: Colors.grey, fontSize: 13)),
-                    ],
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Text('완료한 경험',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
-              )
-            else
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList.separated(
@@ -136,11 +156,166 @@ class HomeScreen extends StatelessWidget {
                   itemBuilder: (_, i) => _CompletedCard(exp: completed[i]),
                 ),
               ),
+            ],
 
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── 경험 추천 카드 ────────────────────────────────────────────────────────────
+class _ExpCard extends StatelessWidget {
+  final Experience exp;
+  final bool isFit;
+  const _ExpCard({required this.exp, required this.isFit});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = isFit ? const Color(0xFF7F77DD) : const Color(0xFFD85A30);
+    final bg = isFit ? const Color(0xFFEEEDFE) : const Color(0xFFFAECE7);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: bg, borderRadius: BorderRadius.circular(8)),
+                child: Text(
+                  isFit ? '✦ 핏한 경험' : '⚡ 색다른 경험',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: accent),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: exp.difficulty.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${exp.difficulty.emoji} +${exp.difficulty.points}P',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: exp.difficulty.color),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(exp.title,
+              style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(exp.subtitle,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _DotStat(label: '체력', value: exp.energy, color: accent),
+              const SizedBox(width: 20),
+              _DotStat(label: '용기', value: exp.courage, color: accent),
+              const SizedBox(width: 20),
+              _DotStat(label: '비용', value: exp.cost, color: accent),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: exp.matchedKeywords
+                .map((kw) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('#$kw',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600)),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: accent,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => VerifyScreen(exp: exp)),
+              ),
+              child: const Text('이 경험 선택하기',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 점 지표 ───────────────────────────────────────────────────────────────────
+class _DotStat extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+  const _DotStat(
+      {required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        const SizedBox(height: 5),
+        Row(
+          children: List.generate(
+            3,
+            (i) => Container(
+              width: 10,
+              height: 10,
+              margin: const EdgeInsets.only(right: 4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: i < value ? color : Colors.grey.shade200,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -160,10 +335,10 @@ class _LevelBar extends StatelessWidget {
           children: [
             Text('다음 레벨까지',
                 style:
-                TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                    TextStyle(fontSize: 12, color: Colors.grey.shade500)),
             Text('$xp / 100 XP',
                 style:
-                TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                    TextStyle(fontSize: 12, color: Colors.grey.shade500)),
           ],
         ),
         const SizedBox(height: 6),
@@ -173,8 +348,8 @@ class _LevelBar extends StatelessWidget {
             value: xp / 100,
             minHeight: 6,
             backgroundColor: Colors.grey.shade200,
-            valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF7F77DD)),
+            valueColor:
+                const AlwaysStoppedAnimation<Color>(Color(0xFF7F77DD)),
           ),
         ),
       ],
@@ -254,7 +429,7 @@ class _CompletedCard extends StatelessWidget {
           ),
           Container(
             padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: exp.difficulty.color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),

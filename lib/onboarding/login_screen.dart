@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'signup_screen.dart';
-import 'onboarding_keyword_screen.dart';
-import 'main_shell.dart';
+import 'onboarding_profile_screen.dart';
+import '../screens/main_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => needsOnboarding
-            ? OnboardingKeywordScreen(userId: id)
+            ? OnboardingProfileScreen(userId: id)
             : const MainShell(),
       ),
     );

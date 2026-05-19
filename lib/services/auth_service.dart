@@ -12,6 +12,9 @@ class AuthService {
   // 온보딩 키워드 저장
   static final Map<String, List<String>> _userKeywords = {};
 
+  // 프로필 정보 저장 (나이, MBTI, 직업, 취미)
+  static final Map<String, UserProfile> _userProfiles = {};
+
   // 현재 로그인된 사용자
   static String? _currentUserId;
 
@@ -36,6 +39,28 @@ class AuthService {
     _users[id] = {'password': password, 'nickname': nickname};
     return true;
   }
+
+  /// 프로필 저장 (나이, MBTI, 직업, 취미)
+  static void saveProfile({
+    required String userId,
+    required int age,
+    required String mbti,
+    required String job,
+    required List<String> hobbies,
+  }) {
+    _userProfiles[userId] = UserProfile(
+      age: age,
+      mbti: mbti,
+      job: job,
+      hobbies: hobbies,
+    );
+  }
+
+  /// 프로필 가져오기
+  static UserProfile? getProfile(String userId) => _userProfiles[userId];
+
+  /// 프로필 입력 완료 여부
+  static bool hasProfile(String userId) => _userProfiles.containsKey(userId);
 
   /// 온보딩 완료 처리
   static void completeOnboarding(String userId, List<String> keywords) {
@@ -62,4 +87,23 @@ class AuthService {
   static String getNickname(String userId) {
     return _users[userId]?['nickname'] ?? userId;
   }
+}
+
+/// 사용자 프로필 모델
+class UserProfile {
+  final int age;
+  final String mbti;
+  final String job;
+  final List<String> hobbies;
+
+  const UserProfile({
+    required this.age,
+    required this.mbti,
+    required this.job,
+    required this.hobbies,
+  });
+
+  @override
+  String toString() =>
+      'UserProfile(age: $age, mbti: $mbti, job: $job, hobbies: $hobbies)';
 }

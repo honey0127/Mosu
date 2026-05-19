@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'keyword_screen.dart';
 import 'my_page_screen.dart';
 import 'character_room_screen.dart';
+import 'community_screen.dart';
 
 /// 로그인·온보딩 통과 후 보이는 앱 본체
-/// 탭 구조: 홈 / 내 공간 / 마이  (중앙에 '탐험 시작' FAB)
+/// 탭 구조: 홈 / 내 공간 / 커뮤니티 / 마이
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -14,15 +14,14 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  static const _primary = Color(0xFF7F77DD);
-
   int _index = 0;
 
   Widget get _body {
     switch (_index) {
       case 0: return const HomeScreen();
       case 1: return const CharacterRoomScreen();
-      case 2: return const MyPageScreen();
+      case 2: return const CommunityScreen();
+      case 3: return const MyPageScreen();
       default: return const HomeScreen();
     }
   }
@@ -31,24 +30,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _body,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const KeywordScreen()),
-          );
-          setState(() {});
-        },
-        backgroundColor: _primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.explore_outlined),
-        label: const Text('탐험 시작',
-            style: TextStyle(fontWeight: FontWeight.w600)),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -66,14 +48,19 @@ class _MainShellState extends State<MainShell> {
               selected: _index == 1,
               onTap: () => setState(() => _index = 1),
             ),
-            // FAB 노치 자리
-            const SizedBox(width: 72),
+            _NavButton(
+              icon: Icons.people_outline,
+              activeIcon: Icons.people,
+              label: '커뮤니티',
+              selected: _index == 2,
+              onTap: () => setState(() => _index = 2),
+            ),
             _NavButton(
               icon: Icons.person_outline,
               activeIcon: Icons.person,
               label: '마이',
-              selected: _index == 2,
-              onTap: () => setState(() => _index = 2),
+              selected: _index == 3,
+              onTap: () => setState(() => _index = 3),
             ),
           ],
         ),
@@ -82,7 +69,6 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-/// 하단 네비 버튼 — 아이콘 + 라벨, 선택 시 색 변경
 class _NavButton extends StatelessWidget {
   final IconData icon;
   final IconData activeIcon;
