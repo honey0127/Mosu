@@ -1,16 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/models.dart';
-import 'animal_picker_screen.dart';
 
-/// 내 공간 — 캐릭터(외면)가 방(내면) 안에 서있는 한 장면.
+/// 내 공간 — 두 명의 동물의숲 스타일 사람 캐릭터가 방 안에 서있는 한 장면.
 ///
-/// 화면 구성:
-///   상단: 방 + 아바타 통합 미리보기
-///   하단: 탭(캐릭터 꾸미기 / 방 꾸미기 / 상점)으로 슬롯 조작
-///
-/// 핵심 컨셉: 방과 캐릭터 둘 다 실제 경험으로만 채워지고,
-/// 한 장면에 함께 보여 "지금까지 내가 한 경험들이 곧 나"라는 걸 시각화한다.
+/// 핵심 컨셉:
+///  • 두 캐릭터 각각 헤어·피부 등 개인 정체성을 반영해 꾸밀 수 있음
+///  • 실제 경험을 완료해야 아이템(의상·소품·방 가구)이 잠금 해제됨
+///  • 방과 캐릭터 둘 다 "지금까지 내가 한 경험들이 곧 나"라는 걸 시각화
 class CharacterRoomScreen extends StatefulWidget {
   const CharacterRoomScreen({super.key});
 
@@ -29,29 +26,12 @@ class _CharacterRoomScreenState extends State<CharacterRoomScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 3, vsync: this);
-
-    // 동물 미선택 상태면 첫 프레임 후 picker 띄움
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && AppState.i.selectedAnimalId == null) {
-        _openAnimalPicker(firstTime: true);
-      }
-    });
   }
 
   @override
   void dispose() {
     _tab.dispose();
     super.dispose();
-  }
-
-  Future<void> _openAnimalPicker({bool firstTime = false}) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AnimalPickerScreen(isFirstTime: firstTime),
-        fullscreenDialog: firstTime,
-      ),
-    );
-    if (mounted) setState(() {});
   }
 
   @override
@@ -75,7 +55,7 @@ class _CharacterRoomScreenState extends State<CharacterRoomScreen>
                           style: TextStyle(
                               fontSize: 22, fontWeight: FontWeight.w800)),
                       SizedBox(height: 2),
-                      Text('밖에서 어떤 사람인지(캐릭터) · 내면이 어떤지(방)',
+                      Text('두 캐릭터가 함께 쌓아온 경험의 공간',
                           style: TextStyle(
                               fontSize: 11, color: Color(0xFF8E8E93))),
                     ],
@@ -97,12 +77,15 @@ class _CharacterRoomScreenState extends State<CharacterRoomScreen>
               ),
             ),
 
-            // ── 방 + 아바타 통합 미리보기 ──────────────────────────
+            // ── 방 + 두 아바타 통합 미리보기 ──────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-              child: _RoomSceneWithAvatar(
+              child: _RoomSceneWithAvatars(
                 state: state,
-                onChangeAnimal: () => _openAnimalPicker(),
+                onTapChar: (i) {
+                  setState(() => state.selectedCharacterIndex = i);
+                  _tab.animateTo(0); // 캐릭터 탭으로 이동
+                },
               ),
             ),
 
@@ -164,7 +147,7 @@ class _CharacterRoomScreenState extends State<CharacterRoomScreen>
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//                  공유 헬퍼 — id로 아이템 찾기
+//                       공유 헬퍼
 // ══════════════════════════════════════════════════════════════════════════════
 WardrobeItem? _findItem(String? id) {
   if (id == null) return null;
@@ -174,8 +157,6 @@ WardrobeItem? _findItem(String? id) {
   return null;
 }
 
-// ── 옷 색깔 (카테고리 기반) ──────────────────────────────────────────────────
-// AC 스타일 컬러 패치를 그릴 때 사용. 같은 카테고리 옷은 톤이 통일됨.
 ({Color fill, Color accent}) _clothingTone(WardrobeItem item) {
   switch (item.category) {
     case ExperienceCategory.cooking:
@@ -202,37 +183,28 @@ WardrobeItem? _findItem(String? id) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//                  방 안에 아바타가 서있는 통합 프리뷰
+//                  방 안에 두 아바타가 서있는 통합 프리뷰
 // ══════════════════════════════════════════════════════════════════════════════
-class _RoomSceneWithAvatar extends StatelessWidget {
+class _RoomSceneWithAvatars extends StatelessWidget {
   final AppState state;
-  final VoidCallback onChangeAnimal;
-  const _RoomSceneWithAvatar({
+  final ValueChanged<int> onTapChar;
+
+  const _RoomSceneWithAvatars({
     required this.state,
-    required this.onChangeAnimal,
+    required this.onTapChar,
   });
 
   @override
   Widget build(BuildContext context) {
-    // 방 아이템
     final wall   = _findItem(state.roomEquipped['wall']);
     final desk   = _findItem(state.roomEquipped['desk']);
     final floor  = _findItem(state.roomEquipped['floor']);
     final window = _findItem(state.roomEquipped['window']);
-
-    // 캐릭터 아이템
-    final hat   = _findItem(state.characterEquipped['hat']);
-    final top   = _findItem(state.characterEquipped['top']);
-    final bot   = _findItem(state.characterEquipped['bottom']);
-    final acc   = _findItem(state.characterEquipped['accessory']);
-
-    final animal = state.selectedAnimal;
-
     final isMostlyEmpty = state.roomFillRatio < 0.25;
 
     return Container(
       width: double.infinity,
-      height: 320,
+      height: 300,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFFFAF8F1), Color(0xFFEFE8DC)],
@@ -253,125 +225,75 @@ class _RoomSceneWithAvatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
-            // ─── 바닥선 (벽-바닥 경계) ───────────────────────────
+            // ─── 바닥선 (벽-바닥 경계)
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: 60,
-              child: Container(
-                height: 1,
-                color: Colors.brown.withOpacity(0.12),
-              ),
+              left: 0, right: 0, bottom: 55,
+              child: Container(height: 1, color: Colors.brown.withOpacity(0.12)),
             ),
 
-            // ─── 벽 — 좌측 상단 ─────────────────────────────────
+            // ─── 벽 좌측 상단
             Positioned(
-              top: 20,
-              left: 24,
+              top: 18, left: 22,
               child: wall != null
-                  ? Text(wall.emoji, style: const TextStyle(fontSize: 48))
+                  ? Text(wall.emoji, style: const TextStyle(fontSize: 46))
                   : const _EmptySlotPill(label: '벽'),
             ),
 
-            // ─── 창문 — 우측 상단 ───────────────────────────────
+            // ─── 창문 우측 상단
             Positioned(
-              top: 24,
-              right: 28,
+              top: 22, right: 26,
               child: window != null
-                  ? Text(window.emoji, style: const TextStyle(fontSize: 44))
+                  ? Text(window.emoji, style: const TextStyle(fontSize: 42))
                   : const _EmptySlotPill(label: '창문'),
             ),
 
-            // ─── 책상 — 좌측 하단 (바닥 위) ─────────────────────
+            // ─── 책상 좌측 하단
             Positioned(
-              bottom: 18,
-              left: 24,
+              bottom: 14, left: 22,
               child: desk != null
-                  ? Text(desk.emoji, style: const TextStyle(fontSize: 46))
+                  ? Text(desk.emoji, style: const TextStyle(fontSize: 44))
                   : const _EmptySlotPill(label: '책상'),
             ),
 
-            // ─── 바닥 소품 — 우측 하단 ──────────────────────────
+            // ─── 바닥 소품 우측 하단
             Positioned(
-              bottom: 18,
-              right: 28,
+              bottom: 14, right: 26,
               child: floor != null
-                  ? Text(floor.emoji, style: const TextStyle(fontSize: 46))
+                  ? Text(floor.emoji, style: const TextStyle(fontSize: 44))
                   : const _EmptySlotPill(label: '바닥'),
             ),
 
-            // ─── 캐릭터 — 가운데, 방 안에 서있음 ────────────────
+            // ─── 캐릭터 1 (좌측) — 탭하면 캐릭터 1 편집으로
             Positioned.fill(
               child: Align(
-                alignment: const Alignment(0, 0.55),
-                child: animal != null
-                    ? _AnimalAvatar(
-                        animal: animal,
-                        hat: hat,
-                        top: top,
-                        bottom: bot,
-                        accessory: acc,
-                      )
-                    : const SizedBox.shrink(),
+                alignment: const Alignment(-0.35, 0.75),
+                child: GestureDetector(
+                  onTap: () => onTapChar(0),
+                  child: _buildCharWidget(state.characters[0], scale: 0.62,
+                      isSelected: state.selectedCharacterIndex == 0),
+                ),
               ),
             ),
 
-            // ─── 동물 바꾸기 칩 — 우측 상단 ─────────────────────
-            if (animal != null)
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onChangeAnimal,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.92),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.cached,
-                              size: 13, color: Color(0xFF7F77DD)),
-                          const SizedBox(width: 4),
-                          Text(animal.emoji,
-                              style: const TextStyle(fontSize: 13)),
-                          const SizedBox(width: 4),
-                          const Text('바꾸기',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF534AB7),
-                              )),
-                        ],
-                      ),
-                    ),
-                  ),
+            // ─── 캐릭터 2 (우측) — 탭하면 캐릭터 2 편집으로
+            Positioned.fill(
+              child: Align(
+                alignment: const Alignment(0.36, 0.60),
+                child: GestureDetector(
+                  onTap: () => onTapChar(1),
+                  child: _buildCharWidget(state.characters[1], scale: 0.58,
+                      isSelected: state.selectedCharacterIndex == 1),
                 ),
               ),
+            ),
 
-            // ─── 텅 빈 방 안내 ──────────────────────────────────
+            // ─── 텅 빈 방 안내
             if (isMostlyEmpty)
               Positioned(
-                top: 10,
-                left: 0,
-                right: 0,
+                top: 10, left: 0, right: 0,
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(10),
@@ -379,10 +301,9 @@ class _RoomSceneWithAvatar extends StatelessWidget {
                     child: Text(
                       '아직 텅 빈 방 — 경험으로 채워보세요',
                       style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
+                          fontSize: 10,
+                          color: Colors.grey.shade600,
+                          fontStyle: FontStyle.italic),
                     ),
                   ),
                 ),
@@ -392,35 +313,60 @@ class _RoomSceneWithAvatar extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildCharWidget(CharacterProfile profile, {
+    required double scale,
+    required bool isSelected,
+  }) {
+    final hat = _findItem(profile.equipped['hat']);
+    final top = _findItem(profile.equipped['top']);
+    final bot = _findItem(profile.equipped['bottom']);
+    final acc = _findItem(profile.equipped['accessory']);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 이름 태그 (선택된 경우 강조)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFF7F77DD)
+                : Colors.white.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            profile.name,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        _HumanAvatar(
+          profile: profile,
+          hat: hat, top: top, bottom: bot, accessory: acc,
+          scale: scale,
+        ),
+      ],
+    );
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//             동물의숲 풍 의인화 아바타 — 선택한 동물 + 옷 레이어
+//   캐릭터 이미지 아바타 — 실제 PNG 이미지 위에 모자·소품 오버레이
 // ══════════════════════════════════════════════════════════════════════════════
-/// 베이스 동물 위에 의상을 입혀 표현하는 캐릭터 위젯.
-///
-/// 신체 구조(아래→위 z-order):
-///   1. 바닥 그림자
-///   2. 다리 두 개 (몸통 아래)
-///   3. 발 두 개 (다리 아래, 약간 넓게)
-///   4. 팔 두 개 (어깨에서 손목까지, 살짝 바깥으로 회전)
-///   5. 손/발바닥 (팔 끝, 둥근 점)
-///   6. 몸통 (둥근 사다리꼴 — 어깨가 넓고 허리는 살짝 좁음)
-///   7. 하의 emoji (다리 위로 입혀짐)
-///   8. 상의 emoji (몸통 위로 입혀짐, 몸통 폭에 맞춰 크게)
-///   9. 동물 머리 (몸통 위에 살짝 겹쳐서)
-///  10. 모자 (머리 위)
-///  11. 소품 (우측 떠있는 칩)
-class _AnimalAvatar extends StatelessWidget {
-  final Animal animal;
+class _HumanAvatar extends StatelessWidget {
+  final CharacterProfile profile;
   final WardrobeItem? hat;
   final WardrobeItem? top;
   final WardrobeItem? bottom;
   final WardrobeItem? accessory;
   final double scale;
 
-  const _AnimalAvatar({
-    required this.animal,
+  const _HumanAvatar({
+    required this.profile,
     required this.hat,
     required this.top,
     required this.bottom,
@@ -430,274 +376,61 @@ class _AnimalAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ─── 동물별 비율 적용 ───────────────────────────────────
-    // s : 전체 크기 배율 (외부 scale × 동물 고유 bodyScale)
-    final s = scale * animal.bodyScale;
-
-    // ── AC 스타일 비율: 머리 크고 몸은 작음 ──
-    final headFs = 116.0 * animal.headSize * s; // 머리 emoji (크게)
-    final torsoW = 72.0 * animal.torsoAspect * s;
-    final torsoH = 74.0 * s;
-    final legW   = 22.0 * s;
-    final legH   = 40.0 * animal.legLengthRatio * s;
-    final armW   = 17.0 * s;
-    final armH   = 54.0 * s;
-    final handD  = 19.0 * s;
-    final footW  = 32.0 * s;
-    final footH  = 14.0 * s;
-
-    // ── Y 좌표 ──
-    // 머리 emoji 박스는 0~headFs. 실제 그림은 약 0.10~0.88 범위.
-    // 몸통은 머리 그림 바닥 직후에 시작해서 머리와 살짝만 겹치게.
-    final torsoTopY = headFs * 0.78;
-    final torsoBotY = torsoTopY + torsoH;
-    final legTopY   = torsoBotY - 8 * s;
-    final legBotY   = legTopY + legH;
-    final feetTopY  = legBotY - 4 * s;
-
-    // ── 전체 위젯 크기 ──
-    final totalH = feetTopY + footH + 4 * s;
-    final totalW = math.max(180.0 * s, torsoW + armW * 2.6 + 16.0 * s);
-    final cx = totalW / 2;
-
-    // ── X 좌표 ──
-    final legGap = math.max(2.0 * s, torsoW * 0.08);
-    final leftLegX  = cx - legW - legGap / 2;
-    final rightLegX = cx + legGap / 2;
-    final leftFootX  = leftLegX  - (footW - legW) / 2;
-    final rightFootX = rightLegX - (footW - legW) / 2;
-
-    // 어깨 — 토르소 측면 살짝 안쪽
-    final shoulderInsetX = 4 * s;
-    final leftShoulderX  = cx - torsoW / 2 + shoulderInsetX;
-    final rightShoulderX = cx + torsoW / 2 - shoulderInsetX;
-    final leftArmX  = leftShoulderX  - armW / 2;
-    final rightArmX = rightShoulderX - armW / 2;
-    final armTopY   = torsoTopY + 10 * s;
-    final handTopY  = armTopY + armH - 8 * s;
-    final leftHandX  = leftArmX  + 5 * s;
-    final rightHandX = rightArmX + armW - handD - 5 * s;
-
-    // ── 모자·소품 크기 ──
-    final hatFs = headFs * 0.58;
-    final accFs = headFs * 0.26;
-
-    // ── 동물 색상 ──
-    final fur = animal.furColor;
-    final belly = animal.bellyColor ?? animal.furColor;
-    final stroke = animal.furAccent.withOpacity(0.65);
-    final strokeW = 1.5 * s;
-
-    // ── 옷 색상 (카테고리 톤) ──
-    final topTone = top != null ? _clothingTone(top!) : null;
-    final bottomTone = bottom != null ? _clothingTone(bottom!) : null;
-    // 팔: 상의 있으면 위 55%를 상의 색으로 (반팔 길이)
-    final sleeveColor = topTone?.fill;
-    const sleeveRatio = 0.55;
-    // 다리: 하의 있으면 위 65%를 하의 색으로 (반바지~7부)
-    final pantsColor = bottomTone?.fill;
-    const pantsRatio = 0.65;
+    final imgH   = 160.0 * scale;
+    final hatFs  = imgH * 0.20;
+    final accFs  = imgH * 0.14;
+    final itemFs = imgH * 0.14; // 상의·하의 뱃지
 
     return SizedBox(
-      width: totalW,
-      height: totalH,
+      height: imgH + hatFs * 0.6, // 모자 공간 확보
       child: Stack(
+        alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
         children: [
-          // ── 1. 바닥 그림자 ────────────────────────────────
+          // ── 캐릭터 이미지 (male.png / female.png) ─────────────
           Positioned(
-            top: feetTopY + footH - 2 * s,
-            left: cx - (footW + legGap / 2) * 0.95,
-            width: (footW + legGap / 2) * 1.9,
-            height: 9 * s,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.13),
-                borderRadius: BorderRadius.circular(20),
+            bottom: 0,
+            child: Image.asset(
+              profile.gender.assetPath,
+              height: imgH,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => _CharacterPlaceholder(
+                gender: profile.gender,
+                height: imgH,
               ),
             ),
           ),
 
-          // ── 2. 다리 (좌/우) ───────────────────────────────
-          Positioned(
-            top: legTopY,
-            left: leftLegX,
-            child: _BodyPart(
-              width: legW, height: legH,
-              color: fur,
-              upperColor: pantsColor,
-              upperRatio: pantsColor != null ? pantsRatio : 0.0,
-              borderColor: stroke, borderWidth: strokeW,
-              topRadius: legW * 0.42,
-              bottomRadius: legW * 0.5,
-            ),
-          ),
-          Positioned(
-            top: legTopY,
-            left: rightLegX,
-            child: _BodyPart(
-              width: legW, height: legH,
-              color: fur,
-              upperColor: pantsColor,
-              upperRatio: pantsColor != null ? pantsRatio : 0.0,
-              borderColor: stroke, borderWidth: strokeW,
-              topRadius: legW * 0.42,
-              bottomRadius: legW * 0.5,
-            ),
-          ),
-
-          // ── 3. 발 ──────────────────────────────────────────
-          Positioned(
-            top: feetTopY,
-            left: leftFootX,
-            child: _Paw(
-              width: footW, height: footH,
-              color: fur, borderColor: stroke, borderWidth: strokeW,
-            ),
-          ),
-          Positioned(
-            top: feetTopY,
-            left: rightFootX,
-            child: _Paw(
-              width: footW, height: footH,
-              color: fur, borderColor: stroke, borderWidth: strokeW,
-            ),
-          ),
-
-          // ── 4. 팔 (어깨에서 손까지, 바깥으로 살짝 회전) ────
-          Positioned(
-            top: armTopY,
-            left: leftArmX,
-            child: Transform.rotate(
-              angle: 0.18, // CW: 손 끝이 안쪽으로 (resting pose)
-              alignment: Alignment.topCenter,
-              child: _BodyPart(
-                width: armW, height: armH,
-                color: fur,
-                upperColor: sleeveColor,
-                upperRatio: sleeveColor != null ? sleeveRatio : 0.0,
-                borderColor: stroke, borderWidth: strokeW,
-                topRadius: armW * 0.5,
-                bottomRadius: armW * 0.5,
-              ),
-            ),
-          ),
-          Positioned(
-            top: armTopY,
-            left: rightArmX,
-            child: Transform.rotate(
-              angle: -0.18,
-              alignment: Alignment.topCenter,
-              child: _BodyPart(
-                width: armW, height: armH,
-                color: fur,
-                upperColor: sleeveColor,
-                upperRatio: sleeveColor != null ? sleeveRatio : 0.0,
-                borderColor: stroke, borderWidth: strokeW,
-                topRadius: armW * 0.5,
-                bottomRadius: armW * 0.5,
-              ),
-            ),
-          ),
-
-          // ── 5. 손 (팔 끝, 둥근 원) ────────────────────────
-          Positioned(
-            top: handTopY,
-            left: leftHandX,
-            child: _Paw(
-              width: handD, height: handD,
-              color: fur, borderColor: stroke, borderWidth: strokeW,
-              circle: true,
-            ),
-          ),
-          Positioned(
-            top: handTopY,
-            left: rightHandX,
-            child: _Paw(
-              width: handD, height: handD,
-              color: fur, borderColor: stroke, borderWidth: strokeW,
-              circle: true,
-            ),
-          ),
-
-          // ── 6. 몸통 — 어깨 넓고 허리 좁은 옹기형, 배 하이라이트 ─
-          Positioned(
-            top: torsoTopY,
-            left: cx - torsoW / 2,
-            child: CustomPaint(
-              size: Size(torsoW, torsoH),
-              painter: _TorsoPainter(
-                fill: fur,
-                belly: belly,
-                stroke: stroke,
-                strokeWidth: strokeW,
-                shirtFill: topTone?.fill,
-                shirtAccent: topTone?.accent.withOpacity(0.7),
-              ),
-            ),
-          ),
-
-          // ── 7. 하의 (다리 위로 입혀짐) ────────────────────
-          // 하의는 다리(_BodyPart)에 직접 칠해지므로 여기서는 비움
-
-          // ── 8. 상의 (몸통 위로 입혀짐, 토르소 폭에 맞게) ───
-          // 상의는 _TorsoPainter 내부에 V넥 셔츠로 통합 렌더링되므로 비움
-
-          // ── 9. 동물 머리 ───────────────────────────────────
-          Positioned(
-            top: 0,
-            left: cx - headFs / 2,
-            width: headFs,
-            height: headFs,
-            child: Center(
-              child: Text(
-                animal.emoji,
-                style: TextStyle(fontSize: headFs, height: 1.0),
-              ),
-            ),
-          ),
-
-          // ── 10. 모자 (머리 위로 살짝 겹침) ────────────────
+          // ── 모자 (머리 위 영역 — 이미지 상단 약 18% 지점) ────
           if (hat != null)
             Positioned(
-              top: headFs * 0.02 - hatFs * 0.45,
-              left: cx - hatFs / 2,
-              width: hatFs,
-              height: hatFs,
-              child: Center(
-                child: Text(
-                  hat!.emoji,
-                  style: TextStyle(fontSize: hatFs, height: 1.0),
-                ),
-              ),
+              top: 0,
+              child: Text(hat!.emoji,
+                  style: TextStyle(fontSize: hatFs, height: 1.0)),
             ),
 
-          // ── 11. 소품 (우측 둥근 칩) ───────────────────────
+          // ── 상의 아이템 배지 (좌측 상단) ─────────────────────
+          if (top != null)
+            Positioned(
+              top: imgH * 0.30,
+              left: 0,
+              child: _ItemBadge(emoji: top!.emoji, size: itemFs),
+            ),
+
+          // ── 하의 아이템 배지 (좌측 하단) ─────────────────────
+          if (bottom != null)
+            Positioned(
+              bottom: imgH * 0.08,
+              left: 0,
+              child: _ItemBadge(emoji: bottom!.emoji, size: itemFs),
+            ),
+
+          // ── 소품 (우측 손 높이) ───────────────────────────────
           if (accessory != null)
             Positioned(
-              top: handTopY - accFs * 0.15,
-              right: -accFs * 0.30,
-              child: Container(
-                padding: EdgeInsets.all(4 * s),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: animal.furAccent.withOpacity(0.6),
-                      width: 1.5 * s),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.10),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  accessory!.emoji,
-                  style: TextStyle(fontSize: accFs, height: 1.0),
-                ),
-              ),
+              bottom: imgH * 0.25,
+              right: 0,
+              child: _ItemBadge(emoji: accessory!.emoji, size: accFs),
             ),
         ],
       ),
@@ -705,421 +438,38 @@ class _AnimalAvatar extends StatelessWidget {
   }
 }
 
-/// 둥근 사각형 신체 부위 (팔/다리/몸통 후보 등)
-class _BodyPart extends StatelessWidget {
-  final double width;
+/// 이미지 로드 실패 시 표시할 심플 placeholder
+class _CharacterPlaceholder extends StatelessWidget {
+  final CharacterGender gender;
   final double height;
-  final Color color;          // 신체 본래 털색 (lower 영역)
-  final Color? upperColor;    // 옷 색 (sleeve/pants 영역). null이면 옷 없음
-  final double upperRatio;    // 옷이 차지하는 비율 (0.0~1.0). 위에서부터 차오름
-  final Color borderColor;
-  final double borderWidth;
-  final double topRadius;
-  final double bottomRadius;
-  const _BodyPart({
-    required this.width,
-    required this.height,
-    required this.color,
-    this.upperColor,
-    this.upperRatio = 0.0,
-    required this.borderColor,
-    required this.borderWidth,
-    required this.topRadius,
-    required this.bottomRadius,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(width, height),
-      painter: _BodyPartPainter(
-        color: color,
-        upperColor: upperColor,
-        upperRatio: upperRatio,
-        borderColor: borderColor,
-        borderWidth: borderWidth,
-        topRadius: topRadius,
-        bottomRadius: bottomRadius,
-      ),
-    );
-  }
-}
-
-/// 신체 부위(팔/다리)를 한 번에 칠하는 painter.
-/// upperColor가 지정되면 위쪽 upperRatio 만큼을 옷 색으로 덮어서 sleeve/pants 효과.
-class _BodyPartPainter extends CustomPainter {
-  final Color color;
-  final Color? upperColor;
-  final double upperRatio;
-  final Color borderColor;
-  final double borderWidth;
-  final double topRadius;
-  final double bottomRadius;
-  _BodyPartPainter({
-    required this.color,
-    required this.upperColor,
-    required this.upperRatio,
-    required this.borderColor,
-    required this.borderWidth,
-    required this.topRadius,
-    required this.bottomRadius,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    final outer = Path()
-      ..addRRect(RRect.fromRectAndCorners(
-        Rect.fromLTWH(0, 0, w, h),
-        topLeft: Radius.circular(topRadius),
-        topRight: Radius.circular(topRadius),
-        bottomLeft: Radius.circular(bottomRadius),
-        bottomRight: Radius.circular(bottomRadius),
-      ));
-
-    // 1) lower 영역(털) 채우기
-    canvas.drawPath(outer, Paint()..color = color);
-
-    // 2) upper 영역(옷) — outer로 clip 한 채 위에서부터 비율 만큼 채움
-    if (upperColor != null && upperRatio > 0) {
-      canvas.save();
-      canvas.clipPath(outer);
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, w, h * upperRatio),
-        Paint()..color = upperColor!,
-      );
-      canvas.restore();
-    }
-
-    // 3) 윤곽선
-    canvas.drawPath(
-      outer,
-      Paint()
-        ..color = borderColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = borderWidth
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _BodyPartPainter old) =>
-      old.color != color ||
-      old.upperColor != upperColor ||
-      old.upperRatio != upperRatio ||
-      old.borderColor != borderColor ||
-      old.borderWidth != borderWidth ||
-      old.topRadius != topRadius ||
-      old.bottomRadius != bottomRadius;
-}
-
-/// 손/발바닥 — oval 또는 원
-class _Paw extends StatelessWidget {
-  final double width;
-  final double height;
-  final Color color;
-  final Color borderColor;
-  final double borderWidth;
-  final bool circle;
-  const _Paw({
-    required this.width,
-    required this.height,
-    required this.color,
-    required this.borderColor,
-    required this.borderWidth,
-    this.circle = false,
-  });
+  const _CharacterPlaceholder({required this.gender, required this.height});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: width,
+      width: height * 0.6,
       height: height,
       decoration: BoxDecoration(
-        color: color,
-        shape: circle ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius:
-            circle ? null : BorderRadius.circular(width / 2),
-        border: Border.all(color: borderColor, width: borderWidth),
+        color: const Color(0xFFF0EEF8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD0CCEE), width: 1.5),
       ),
-    );
-  }
-}
-
-/// 어깨가 넓고 허리가 약간 좁은 몸통 — CustomPainter로 부드러운 곡선 실루엣.
-/// 셔츠(top)가 지정되면 몸통 영역에 V넥 셔츠 모양으로 옷 색을 채워 넣음.
-/// 배 부분에 더 밝은 톤(belly)을 oval로 깔아서 입체감을 살림.
-class _TorsoPainter extends CustomPainter {
-  final Color fill;          // 털색
-  final Color belly;         // 배(밝은 톤)
-  final Color stroke;        // 윤곽선
-  final double strokeWidth;
-  final Color? shirtFill;    // 셔츠 본 색 (null이면 옷 없음)
-  final Color? shirtAccent;  // 셔츠 네크라인 강조
-  _TorsoPainter({
-    required this.fill,
-    required this.belly,
-    required this.stroke,
-    required this.strokeWidth,
-    this.shirtFill,
-    this.shirtAccent,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // ── 옹기형 몸통 (어깨 넓고 허리 좁음) ──
-    final shoulderInset = w * 0.05;
-    final waistInset = w * 0.16;
-
-    final outerPath = Path()
-      ..moveTo(shoulderInset, h * 0.10)
-      ..quadraticBezierTo(w * 0.50, -h * 0.05, w - shoulderInset, h * 0.10)
-      ..quadraticBezierTo(
-          w - shoulderInset * 0.5, h * 0.55, w - waistInset, h * 0.95)
-      ..quadraticBezierTo(w * 0.50, h * 1.06, waistInset, h * 0.95)
-      ..quadraticBezierTo(
-          shoulderInset * 0.5, h * 0.55, shoulderInset, h * 0.10)
-      ..close();
-
-    final fillPaint = Paint()..color = fill;
-    final bellyPaint = Paint()..color = belly;
-    final strokePaint = Paint()
-      ..color = stroke
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeJoin = StrokeJoin.round;
-
-    // 1) 털 채우기
-    canvas.drawPath(outerPath, fillPaint);
-
-    // 2) 배 하이라이트 (몸통 안쪽 oval)
-    final bellyRect = Rect.fromCenter(
-      center: Offset(w * 0.50, h * 0.62),
-      width: w * 0.62,
-      height: h * 0.62,
-    );
-    canvas.save();
-    canvas.clipPath(outerPath);
-    canvas.drawOval(bellyRect, bellyPaint);
-    canvas.restore();
-
-    // 3) 셔츠 — 몸통 outer 안쪽에 V넥 절개로 그림
-    if (shirtFill != null) {
-      final neckWidth = w * 0.30;
-      final neckDepth = h * 0.26; // V넥 깊이
-
-      // 셔츠 경로 = 몸통 외곽 - V넥 컷
-      final shirtPath = Path()
-        // 좌측 어깨 시작
-        ..moveTo(shoulderInset, h * 0.10)
-        // 윗변 (목 좌측까지)
-        ..lineTo(w * 0.50 - neckWidth / 2, h * 0.10)
-        // V넥 컷 — 가운데로 깊이 들어갔다가 다시 올라옴
-        ..quadraticBezierTo(
-            w * 0.50, neckDepth, w * 0.50 + neckWidth / 2, h * 0.10)
-        // 우측 어깨까지 윗변
-        ..lineTo(w - shoulderInset, h * 0.10)
-        // 우측 옆선 (몸통과 동일)
-        ..quadraticBezierTo(
-            w - shoulderInset * 0.5, h * 0.55, w - waistInset, h * 0.95)
-        // 하단 변
-        ..quadraticBezierTo(w * 0.50, h * 1.06, waistInset, h * 0.95)
-        // 좌측 옆선
-        ..quadraticBezierTo(
-            shoulderInset * 0.5, h * 0.55, shoulderInset, h * 0.10)
-        ..close();
-
-      canvas.save();
-      canvas.clipPath(outerPath);
-      canvas.drawPath(shirtPath, Paint()..color = shirtFill!);
-      // 네크라인 강조 — V컷 따라 살짝 더 진한 선
-      if (shirtAccent != null) {
-        final neckLine = Path()
-          ..moveTo(w * 0.50 - neckWidth / 2, h * 0.10)
-          ..quadraticBezierTo(
-              w * 0.50, neckDepth, w * 0.50 + neckWidth / 2, h * 0.10);
-        canvas.drawPath(
-          neckLine,
-          Paint()
-            ..color = shirtAccent!
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = strokeWidth * 1.2
-            ..strokeCap = StrokeCap.round,
-        );
-      }
-      canvas.restore();
-    }
-
-    // 4) 몸통 윤곽선 (가장 마지막)
-    canvas.drawPath(outerPath, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TorsoPainter old) =>
-      old.fill != fill ||
-      old.belly != belly ||
-      old.stroke != stroke ||
-      old.strokeWidth != strokeWidth ||
-      old.shirtFill != shirtFill ||
-      old.shirtAccent != shirtAccent;
-}
-
-// (옛 _ShirtPatch / _PantsPatch는 _TorsoPainter / _BodyPart에 통합되어 삭제됨)
-// ══════════════════════════════════════════════════════════════════════════════
-//                       (제거됨) 옷 패치 — 상의 / 하의
-// ══════════════════════════════════════════════════════════════════════════════
-/// 상의 패치 — 어깨에서 허리까지 fit되는 셔츠 모양 + 작은 emoji 아이콘.
-/// emoji가 둥둥 떠다니지 않게 카테고리 컬러로 몸에 실제로 입혀진 형태로 렌더링.
-class _ShirtPatch extends StatelessWidget {
-  final double centerX;
-  final double topY;
-  final double width;
-  final double height;
-  final ({Color fill, Color accent}) tone;
-  final String emoji;
-  final double strokeW;
-  const _ShirtPatch({
-    required this.centerX,
-    required this.topY,
-    required this.width,
-    required this.height,
-    required this.tone,
-    required this.emoji,
-    required this.strokeW,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: topY,
-      left: centerX - width / 2,
-      width: width,
-      height: height,
-      child: Stack(
-        alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CustomPaint(
-            size: Size(width, height),
-            painter: _ShirtPainter(
-              fill: tone.fill,
-              stroke: tone.accent.withOpacity(0.75),
-              strokeWidth: strokeW,
-            ),
+          Text(
+            gender == CharacterGender.female ? '👧' : '👦',
+            style: TextStyle(fontSize: height * 0.28),
           ),
-          // 옷 식별용 작은 emoji 아이콘
-          Text(emoji,
-              style: TextStyle(fontSize: width * 0.42, height: 1.0)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ShirtPainter extends CustomPainter {
-  final Color fill;
-  final Color stroke;
-  final double strokeWidth;
-  _ShirtPainter({
-    required this.fill,
-    required this.stroke,
-    required this.strokeWidth,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    final shoulderInset = w * 0.04;
-    final neckWidth = w * 0.28;
-    final neckDepth = h * 0.20;
-
-    final path = Path()
-      // 좌측 어깨
-      ..moveTo(shoulderInset, h * 0.10)
-      // 어깨선 → 목 좌측
-      ..lineTo(w * 0.50 - neckWidth / 2, h * 0.10)
-      // V넥 컷
-      ..quadraticBezierTo(
-          w * 0.50, neckDepth, w * 0.50 + neckWidth / 2, h * 0.10)
-      // 어깨선 → 우측 어깨
-      ..lineTo(w - shoulderInset, h * 0.10)
-      // 우측 옆선 (어깨 → 허리, 살짝 펴짐)
-      ..quadraticBezierTo(w * 1.02, h * 0.55, w * 0.92, h * 0.97)
-      // 밑단 (둥근)
-      ..quadraticBezierTo(w * 0.50, h * 1.06, w * 0.08, h * 0.97)
-      // 좌측 옆선
-      ..quadraticBezierTo(-w * 0.02, h * 0.55, shoulderInset, h * 0.10)
-      ..close();
-
-    canvas.drawPath(path, Paint()..color = fill);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = stroke
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ShirtPainter old) =>
-      old.fill != fill ||
-      old.stroke != stroke ||
-      old.strokeWidth != strokeWidth;
-}
-
-/// 하의 패치 — 두 다리에 fit되는 반바지/팬츠 형태 + 작은 emoji 아이콘.
-class _PantsPatch extends StatelessWidget {
-  final double centerX;
-  final double topY;
-  final double width;
-  final double height;
-  final double legGap;
-  final ({Color fill, Color accent}) tone;
-  final String emoji;
-  final double strokeW;
-  const _PantsPatch({
-    required this.centerX,
-    required this.topY,
-    required this.width,
-    required this.height,
-    required this.legGap,
-    required this.tone,
-    required this.emoji,
-    required this.strokeW,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: topY,
-      left: centerX - width / 2,
-      width: width,
-      height: height,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: Size(width, height),
-            painter: _PantsPainter(
-              fill: tone.fill,
-              stroke: tone.accent.withOpacity(0.75),
-              strokeWidth: strokeW,
-              legGap: legGap,
+          const SizedBox(height: 6),
+          Text(
+            '이미지를\nassets에\n추가해주세요',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: height * 0.07,
+              color: const Color(0xFF8E8E93),
+              height: 1.4,
             ),
-          ),
-          // 옷 식별용 작은 emoji 아이콘 (윗쪽 가까이)
-          Align(
-            alignment: const Alignment(0, -0.45),
-            child: Text(emoji,
-                style: TextStyle(fontSize: width * 0.34, height: 1.0)),
           ),
         ],
       ),
@@ -1127,65 +477,33 @@ class _PantsPatch extends StatelessWidget {
   }
 }
 
-class _PantsPainter extends CustomPainter {
-  final Color fill;
-  final Color stroke;
-  final double strokeWidth;
-  final double legGap;
-  _PantsPainter({
-    required this.fill,
-    required this.stroke,
-    required this.strokeWidth,
-    required this.legGap,
-  });
+/// 아이템 오버레이 배지 (흰 동그라미 배경 위 emoji)
+class _ItemBadge extends StatelessWidget {
+  final String emoji;
+  final double size;
+  const _ItemBadge({required this.emoji, required this.size});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    // 가랑이 폭은 다리 간격에 비례
-    final crotchHalf = (legGap / w).clamp(0.05, 0.18) * w / 2;
-
-    final path = Path()
-      // 좌상 (허리 좌측)
-      ..moveTo(w * 0.05, h * 0.12)
-      // 허리 윗변
-      ..quadraticBezierTo(w * 0.50, -h * 0.06, w * 0.95, h * 0.12)
-      // 우측 옆선
-      ..lineTo(w * 0.92, h * 0.92)
-      // 우측 다리 바닥 바깥쪽
-      ..quadraticBezierTo(w * 0.88, h * 1.02, w * 0.72, h * 1.00)
-      // 우측 다리 안쪽 (가랑이로 올라감)
-      ..lineTo(w * 0.50 + crotchHalf, h * 0.96)
-      // 가랑이 V (위로 들어감)
-      ..quadraticBezierTo(
-          w * 0.50, h * 0.55, w * 0.50 - crotchHalf, h * 0.96)
-      // 좌측 다리 안쪽
-      ..lineTo(w * 0.28, h * 1.00)
-      // 좌측 다리 바닥 바깥쪽
-      ..quadraticBezierTo(w * 0.12, h * 1.02, w * 0.08, h * 0.92)
-      // 좌측 옆선 → 시작점으로
-      ..close();
-
-    canvas.drawPath(path, Paint()..color = fill);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = stroke
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeJoin = StrokeJoin.round,
+  Widget build(BuildContext context) {
+    return Container(
+      width: size * 1.4,
+      height: size * 1.4,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.88),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.10), blurRadius: 4),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(emoji, style: TextStyle(fontSize: size, height: 1.0)),
     );
   }
-
-  @override
-  bool shouldRepaint(covariant _PantsPainter old) =>
-      old.fill != fill ||
-      old.stroke != stroke ||
-      old.strokeWidth != strokeWidth ||
-      old.legGap != legGap;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+//                        빈 슬롯 알약 레이블
+// ══════════════════════════════════════════════════════════════════════════════
 class _EmptySlotPill extends StatelessWidget {
   final String label;
   const _EmptySlotPill({required this.label});
@@ -1206,16 +524,14 @@ class _EmptySlotPill extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//                          진행도 미니 바
+//                            진행도 미니 바
 // ══════════════════════════════════════════════════════════════════════════════
 class _MiniProgress extends StatelessWidget {
   final String label;
   final String emoji;
   final double ratio;
   const _MiniProgress({
-    required this.label,
-    required this.emoji,
-    required this.ratio,
+    required this.label, required this.emoji, required this.ratio,
   });
 
   @override
@@ -1223,27 +539,22 @@ class _MiniProgress extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 12)),
-            const SizedBox(width: 4),
-            Text(label,
-                style:
-                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text('${(ratio * 100).round()}%',
-                style: TextStyle(
-                    fontSize: 10, color: Colors.grey.shade500)),
-          ],
-        ),
+        Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(label,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+          const Spacer(),
+          Text('${(ratio * 100).round()}%',
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+        ]),
         const SizedBox(height: 4),
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
             value: ratio,
             backgroundColor: Colors.grey.shade200,
-            valueColor:
-                const AlwaysStoppedAnimation(Color(0xFF7F77DD)),
+            valueColor: const AlwaysStoppedAnimation(Color(0xFF7F77DD)),
             minHeight: 4,
           ),
         ),
@@ -1253,35 +564,132 @@ class _MiniProgress extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//                              캐릭터 편집 탭
+//                            캐릭터 편집 탭
 // ══════════════════════════════════════════════════════════════════════════════
-class _CharacterEditTab extends StatelessWidget {
+class _CharacterEditTab extends StatefulWidget {
   final VoidCallback onUpdate;
   const _CharacterEditTab({required this.onUpdate});
 
   @override
+  State<_CharacterEditTab> createState() => _CharacterEditTabState();
+}
+
+class _CharacterEditTabState extends State<_CharacterEditTab> {
+  @override
   Widget build(BuildContext context) {
-    final state = AppState.i;
+    final state      = AppState.i;
+    final charIndex  = state.selectedCharacterIndex;
+    final profile    = state.characters[charIndex];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('밖에서 어떤 사람인지',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF7F77DD),
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          const Text('요리·운동·여행·만남·창작 경험이 캐릭터에 쌓여요',
-              style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93))),
+
+          // ── 캐릭터 선택 ─────────────────────────────────────
+          _CharacterSelector(
+            selectedIndex: charIndex,
+            characters:    state.characters,
+            onSelect: (i) {
+              setState(() => state.selectedCharacterIndex = i);
+              widget.onUpdate();
+            },
+          ),
+          const SizedBox(height: 22),
+
+          // ── 정체성 섹션 ─────────────────────────────────────
+          const _SectionHeader(
+            title: '정체성',
+            sub:   '나를 표현하는 외형을 꾸며요',
+          ),
+          const SizedBox(height: 14),
+
+          // 성별 선택
+          _IdentityRow(
+            label: '성별',
+            child: _GenderPicker(
+              selected: profile.gender,
+              onSelect: (g) {
+                setState(() => profile.gender = g);
+                widget.onUpdate();
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 이름 편집
+          _IdentityRow(
+            label: '이름',
+            child: _NameEditor(
+              name: profile.name,
+              onChanged: (v) {
+                setState(() => profile.name = v);
+                widget.onUpdate();
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 헤어 스타일
+          _IdentityRow(
+            label: '헤어 스타일',
+            child: _HairStylePicker(
+              selected: profile.hairStyle,
+              onSelect: (s) {
+                setState(() => profile.hairStyle = s);
+                widget.onUpdate();
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 머리 색
+          _IdentityRow(
+            label: '머리 색',
+            child: _ColorSwatchPicker(
+              colors: allHairColors
+                  .map((h) => (id: h.id, label: h.label, color: h.color))
+                  .toList(),
+              selectedId: profile.hairColorId,
+              onSelect: (id) {
+                setState(() => profile.hairColorId = id);
+                widget.onUpdate();
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 피부 톤
+          _IdentityRow(
+            label: '피부 톤',
+            child: _ColorSwatchPicker(
+              colors: allSkinColors
+                  .map((s) => (id: s.id, label: s.label, color: s.color))
+                  .toList(),
+              selectedId: profile.skinColorId,
+              onSelect: (id) {
+                setState(() => profile.skinColorId = id);
+                widget.onUpdate();
+              },
+            ),
+          ),
+
+          const SizedBox(height: 24),
+          const Divider(height: 1),
+          const SizedBox(height: 20),
+
+          // ── 경험 아이템 섹션 ─────────────────────────────────
+          const _SectionHeader(
+            title: '경험으로 얻은 아이템',
+            sub:   '완료한 경험에 따라 의상·소품이 잠금 해제돼요',
+          ),
           const SizedBox(height: 18),
 
           for (final slot in characterSlots) ...[
             _SlotItemRow(
-              slotLabel: characterSlotLabels[slot]!,
-              equippedId: state.characterEquipped[slot],
+              slotLabel:  characterSlotLabels[slot]!,
+              equippedId: profile.equipped[slot],
               items: allWardrobeItems
                   .where((it) =>
                       it.dimension == SelfDimension.external &&
@@ -1289,9 +697,9 @@ class _CharacterEditTab extends StatelessWidget {
                       state.wardrobeUnlocked.contains(it.id))
                   .toList(),
               onTap: (id) {
-                final current = state.characterEquipped[slot];
-                state.equipCharacter(slot, current == id ? null : id);
-                onUpdate();
+                final current = profile.equipped[slot];
+                state.equipCharacter(charIndex, slot, current == id ? null : id);
+                widget.onUpdate();
               },
             ),
             const SizedBox(height: 14),
@@ -1303,57 +711,375 @@ class _CharacterEditTab extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//                                방 편집 탭
+//                 정체성 커스터마이징 UI 위젯들
 // ══════════════════════════════════════════════════════════════════════════════
-class _RoomEditTab extends StatelessWidget {
-  final VoidCallback onUpdate;
-  const _RoomEditTab({required this.onUpdate});
+
+/// 캐릭터 1 / 2 선택 토글
+class _CharacterSelector extends StatelessWidget {
+  final int selectedIndex;
+  final List<CharacterProfile> characters;
+  final ValueChanged<int> onSelect;
+
+  const _CharacterSelector({
+    required this.selectedIndex,
+    required this.characters,
+    required this.onSelect,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final state = AppState.i;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('내면이 어떤지',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF7F77DD),
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          const Text('독서·명상·취미·음악·자연 경험이 방에 쌓여요',
-              style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93))),
-          const SizedBox(height: 18),
-
-          for (final slot in roomSlots) ...[
-            _SlotItemRow(
-              slotLabel: roomSlotLabels[slot]!,
-              equippedId: state.roomEquipped[slot],
-              items: allWardrobeItems
-                  .where((it) =>
-                      it.dimension == SelfDimension.internal &&
-                      it.slot == slot &&
-                      state.wardrobeUnlocked.contains(it.id))
-                  .toList(),
-              onTap: (id) {
-                final current = state.roomEquipped[slot];
-                state.equipRoom(slot, current == id ? null : id);
-                onUpdate();
-              },
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F4FE),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: List.generate(characters.length, (i) {
+          final isSelected = selectedIndex == i;
+          final c = characters[i];
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onSelect(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(11),
+                  boxShadow: isSelected
+                      ? [BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4, offset: const Offset(0, 1))]
+                      : null,
+                ),
+                child: Column(
+                  children: [
+                    // 미니 아바타 미리보기 (피부+머리 색 원)
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 38, height: 38,
+                          decoration: BoxDecoration(
+                            color: c.skinColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFF7F77DD)
+                                  : Colors.grey.shade300,
+                              width: isSelected ? 2.5 : 1.5,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          child: Container(
+                            width: 22, height: 11,
+                            decoration: BoxDecoration(
+                              color: c.hairColor,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      c.name,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? const Color(0xFF534AB7)
+                            : Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 14),
-          ],
-        ],
+          );
+        }),
       ),
     );
   }
 }
 
+/// 섹션 헤더
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String sub;
+  const _SectionHeader({required this.title, required this.sub});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF7F77DD),
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 2),
+        Text(sub,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF8E8E93))),
+      ],
+    );
+  }
+}
+
+/// 레이블 + 자식 위젯 행
+class _IdentityRow extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _IdentityRow({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        child,
+      ],
+    );
+  }
+}
+
+/// 이름 편집 인라인 TextField
+class _NameEditor extends StatefulWidget {
+  final String name;
+  final ValueChanged<String> onChanged;
+  const _NameEditor({required this.name, required this.onChanged});
+
+  @override
+  State<_NameEditor> createState() => _NameEditorState();
+}
+
+class _NameEditorState extends State<_NameEditor> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.name);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: TextField(
+        controller: _ctrl,
+        onChanged: widget.onChanged,
+        maxLength: 8,
+        decoration: InputDecoration(
+          counterText: '',
+          hintText: '캐릭터 이름',
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade200),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(
+                color: Color(0xFF7F77DD), width: 1.5),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 헤어 스타일 선택기
+class _HairStylePicker extends StatelessWidget {
+  final HairStyle selected;
+  final ValueChanged<HairStyle> onSelect;
+  const _HairStylePicker({required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 58,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: HairStyle.values.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final style      = HairStyle.values[i];
+          final isSelected = selected == style;
+          return GestureDetector(
+            onTap: () => onSelect(style),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 74,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFFEEEDFE)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFF7F77DD)
+                      : Colors.grey.shade200,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(style.emoji,
+                      style: const TextStyle(fontSize: 20)),
+                  const SizedBox(height: 3),
+                  Text(style.label,
+                      style: const TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 색상 스와치 선택기 (머리색 / 피부색 공용)
+class _ColorSwatchPicker extends StatelessWidget {
+  final List<({String id, String label, Color color})> colors;
+  final String selectedId;
+  final ValueChanged<String> onSelect;
+
+  const _ColorSwatchPicker({
+    required this.colors,
+    required this.selectedId,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: colors.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final c          = colors[i];
+          final isSelected = selectedId == c.id;
+          return Tooltip(
+            message: c.label,
+            child: GestureDetector(
+              onTap: () => onSelect(c.id),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: c.color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF7F77DD)
+                        : Colors.grey.shade300,
+                    width: isSelected ? 3.0 : 1.5,
+                  ),
+                  boxShadow: isSelected
+                      ? [BoxShadow(
+                          color: const Color(0xFF7F77DD).withOpacity(0.40),
+                          blurRadius: 6, spreadRadius: 1)]
+                      : null,
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check,
+                        color: Colors.white, size: 18)
+                    : null,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 성별 선택 토글 (여자 / 남자)
+class _GenderPicker extends StatelessWidget {
+  final CharacterGender selected;
+  final ValueChanged<CharacterGender> onSelect;
+  const _GenderPicker({required this.selected, required this.onSelect});
+
+  static const _primary    = Color(0xFF7F77DD);
+  static const _primaryBg  = Color(0xFFEEEDFE);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: CharacterGender.values.map((g) {
+        final isSelected = selected == g;
+        final emoji = g == CharacterGender.female ? '👧' : '👦';
+        return Padding(
+          padding: const EdgeInsets.only(right: 10),
+          child: GestureDetector(
+            onTap: () => onSelect(g),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? _primaryBg : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelected ? _primary : Colors.grey.shade200,
+                  width: isSelected ? 2.0 : 1.0,
+                ),
+                boxShadow: isSelected
+                    ? [BoxShadow(
+                        color: _primary.withOpacity(0.18),
+                        blurRadius: 8, offset: const Offset(0, 2))]
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 7),
+                  Text(
+                    g.label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? _primary : Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
-//                            슬롯별 아이템 가로 행 (공유)
+//                            슬롯별 아이템 가로 행
 // ══════════════════════════════════════════════════════════════════════════════
 class _SlotItemRow extends StatelessWidget {
   final String slotLabel;
@@ -1373,28 +1099,27 @@ class _SlotItemRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(slotLabel,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w700)),
-            const SizedBox(width: 6),
-            Text('· ${items.length}개',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
-            const Spacer(),
-            if (equippedId != null)
-              Text('탭하면 해제',
-                  style: TextStyle(
-                      fontSize: 10, color: Colors.grey.shade400)),
-          ],
-        ),
+        Row(children: [
+          Text(slotLabel,
+              style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w700)),
+          const SizedBox(width: 6),
+          Text('· ${items.length}개',
+              style: TextStyle(
+                  fontSize: 11, color: Colors.grey.shade400)),
+          const Spacer(),
+          if (equippedId != null)
+            Text('탭하면 해제',
+                style: TextStyle(
+                    fontSize: 10, color: Colors.grey.shade400)),
+        ]),
         const SizedBox(height: 8),
         SizedBox(
           height: 86,
           child: items.isEmpty
               ? Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 22),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 22),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(12),
@@ -1402,9 +1127,9 @@ class _SlotItemRow extends StatelessWidget {
                   ),
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    '아직 잠금 해제된 아이템이 없어요 — 상점에서 어떤 경험으로 얻는지 확인해보세요',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                    '아직 잠금 해제된 아이템이 없어요 — 상점에서 확인해보세요',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500),
                   ),
                 )
               : ListView.separated(
@@ -1412,11 +1137,12 @@ class _SlotItemRow extends StatelessWidget {
                   itemCount: items.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (_, i) {
-                    final it = items[i];
+                    final it         = items[i];
                     final isEquipped = equippedId == it.id;
                     return GestureDetector(
                       onTap: () => onTap(it.id),
-                      child: Container(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
                         width: 78,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
@@ -1454,6 +1180,52 @@ class _SlotItemRow extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//                                방 편집 탭
+// ══════════════════════════════════════════════════════════════════════════════
+class _RoomEditTab extends StatelessWidget {
+  final VoidCallback onUpdate;
+  const _RoomEditTab({required this.onUpdate});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppState.i;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader(
+            title: '내면이 어떤지',
+            sub:   '독서·명상·취미·음악·자연 경험이 방에 쌓여요',
+          ),
+          const SizedBox(height: 18),
+
+          for (final slot in roomSlots) ...[
+            _SlotItemRow(
+              slotLabel:  roomSlotLabels[slot]!,
+              equippedId: state.roomEquipped[slot],
+              items: allWardrobeItems
+                  .where((it) =>
+                      it.dimension == SelfDimension.internal &&
+                      it.slot == slot &&
+                      state.wardrobeUnlocked.contains(it.id))
+                  .toList(),
+              onTap: (id) {
+                final current = state.roomEquipped[slot];
+                state.equipRoom(slot, current == id ? null : id);
+                onUpdate();
+              },
+            ),
+            const SizedBox(height: 14),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //                                  상점 탭
 // ══════════════════════════════════════════════════════════════════════════════
 class _ShopTab extends StatefulWidget {
@@ -1465,8 +1237,8 @@ class _ShopTab extends StatefulWidget {
 }
 
 class _ShopTabState extends State<_ShopTab> {
-  SelfDimension _dimension = SelfDimension.external;
-  ExperienceCategory? _categoryFilter; // null이면 전체
+  SelfDimension _dimension      = SelfDimension.external;
+  ExperienceCategory? _category; // null = 전체
 
   @override
   Widget build(BuildContext context) {
@@ -1474,9 +1246,7 @@ class _ShopTabState extends State<_ShopTab> {
 
     final visible = allWardrobeItems.where((it) {
       if (it.dimension != _dimension) return false;
-      if (_categoryFilter != null && it.category != _categoryFilter) {
-        return false;
-      }
+      if (_category != null && it.category != _category) return false;
       return true;
     }).toList();
 
@@ -1494,13 +1264,13 @@ class _ShopTabState extends State<_ShopTab> {
             value: _dimension,
             onChanged: (d) => setState(() {
               _dimension = d;
-              _categoryFilter = null;
+              _category  = null;
             }),
           ),
 
           const SizedBox(height: 18),
 
-          // 카테고리 칩
+          // 카테고리 안내
           Text(
             _dimension == SelfDimension.external
                 ? '어떤 경험으로 캐릭터 아이템을 얻을지 골라보세요'
@@ -1508,6 +1278,8 @@ class _ShopTabState extends State<_ShopTab> {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
+
+          // 카테고리 칩
           SizedBox(
             height: 36,
             child: ListView(
@@ -1515,15 +1287,15 @@ class _ShopTabState extends State<_ShopTab> {
               children: [
                 _CategoryChip(
                   label: '전체',
-                  selected: _categoryFilter == null,
-                  onTap: () => setState(() => _categoryFilter = null),
+                  selected: _category == null,
+                  onTap: () => setState(() => _category = null),
                 ),
                 const SizedBox(width: 6),
                 for (final c in cats) ...[
                   _CategoryChip(
                     label: '${c.emoji} ${c.label}',
-                    selected: _categoryFilter == c,
-                    onTap: () => setState(() => _categoryFilter = c),
+                    selected: _category == c,
+                    onTap: () => setState(() => _category = c),
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -1545,8 +1317,7 @@ class _ShopTabState extends State<_ShopTab> {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
@@ -1554,49 +1325,42 @@ class _ShopTabState extends State<_ShopTab> {
               ),
               itemCount: visible.length,
               itemBuilder: (_, i) {
-                final item = visible[i];
+                final item       = visible[i];
                 final isUnlocked = state.wardrobeUnlocked.contains(item.id);
-                final canAfford = state.points >= item.cost;
+                final canAfford  = state.points >= item.cost;
                 return _ShopCard(
-                  item: item,
+                  item:       item,
                   isUnlocked: isUnlocked,
-                  canAfford: canAfford,
+                  canAfford:  canAfford,
                   onBuy: () {
                     if (isUnlocked) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '이미 가지고 있어요 — ${item.dimension.label} 탭에서 장착해보세요'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                            '이미 보유 중이에요 — ${item.dimension.label} 탭에서 장착해보세요'),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ));
                       return;
                     }
                     if (state.buyWardrobe(item)) {
                       setState(() {});
                       widget.onUpdate();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '${item.emoji} ${item.name} 획득! ${item.dimension.label}에서 꾸며보세요'),
-                          backgroundColor: const Color(0xFF7F77DD),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                            '${item.emoji} ${item.name} 획득! ${item.dimension.label}에서 꾸며보세요'),
+                        backgroundColor: const Color(0xFF7F77DD),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ));
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                              '포인트가 부족해요. 경험을 더 완료해봐요!'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: const Text('포인트가 부족해요. 경험을 더 완료해봐요!'),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ));
                     }
                   },
                 );
@@ -1630,36 +1394,31 @@ class _DimensionToggle extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: value == d ? Colors.white : Colors.transparent,
+                    color:
+                        value == d ? Colors.white : Colors.transparent,
                     borderRadius: BorderRadius.circular(11),
                     boxShadow: value == d
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ]
+                        ? [BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 4, offset: const Offset(0, 1))]
                         : null,
                   ),
-                  child: Column(
-                    children: [
-                      Text(d.label,
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: value == d
-                                  ? const Color(0xFF534AB7)
-                                  : Colors.grey)),
-                      const SizedBox(height: 2),
-                      Text(d.description,
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: value == d
-                                  ? Colors.grey.shade600
-                                  : Colors.grey.shade400)),
-                    ],
-                  ),
+                  child: Column(children: [
+                    Text(d.label,
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: value == d
+                                ? const Color(0xFF534AB7)
+                                : Colors.grey)),
+                    const SizedBox(height: 2),
+                    Text(d.description,
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: value == d
+                                ? Colors.grey.shade600
+                                : Colors.grey.shade400)),
+                  ]),
                 ),
               ),
             ),
@@ -1673,11 +1432,8 @@ class _CategoryChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _CategoryChip(
+      {required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1689,7 +1445,9 @@ class _CategoryChip extends StatelessWidget {
           color: selected ? const Color(0xFF7F77DD) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: selected ? const Color(0xFF7F77DD) : Colors.grey.shade200),
+              color: selected
+                  ? const Color(0xFF7F77DD)
+                  : Colors.grey.shade200),
         ),
         alignment: Alignment.center,
         child: Text(label,
@@ -1734,32 +1492,30 @@ class _ShopCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F4FE),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: Text(item.emoji, style: const TextStyle(fontSize: 24)),
+          Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F4FE),
+                borderRadius: BorderRadius.circular(10),
               ),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(_slotLabel,
-                    style: TextStyle(
-                        fontSize: 10, color: Colors.grey.shade600)),
+              alignment: Alignment.center,
+              child: Text(item.emoji,
+                  style: const TextStyle(fontSize: 24)),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(6),
               ),
-            ],
-          ),
+              child: Text(_slotLabel,
+                  style: TextStyle(
+                      fontSize: 10, color: Colors.grey.shade600)),
+            ),
+          ]),
           const SizedBox(height: 8),
           Text(item.name,
               style: const TextStyle(
@@ -1769,7 +1525,9 @@ class _ShopCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                  fontSize: 11, color: Colors.grey.shade500, height: 1.3)),
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                  height: 1.3)),
           const Spacer(),
           SizedBox(
             width: double.infinity,

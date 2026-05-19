@@ -156,126 +156,102 @@ extension SelfDimensionX on SelfDimension {
   };
 }
 
-// ─────────────────────────── Animal (캐릭터 종족) ────────────────────────────
-/// 캐릭터의 베이스가 되는 귀여운 동물.
-/// 동물의숲처럼 의인화시켜서, 선택한 동물 위에 옷·소품이 레이어링됨.
-///
-/// 각 동물은 실제 외형에 가까운 털색(furColor)과 윤곽 강조색(furAccent),
-/// 그리고 체형/비율(bodyScale, torsoAspect, legLengthRatio, headSize)을 가짐.
-/// 아바타 위젯은 이 비율들을 사용해 동물마다 다른 실루엣을 그림.
-class Animal {
-  final String id;
-  final String emoji;
-  final String name;
+// ─────────────────────────── Character Customization ─────────────────────────
 
-  /// 동물의 실제 털색 — 몸통/팔/다리/발이 이 색으로 칠해짐
-  final Color furColor;
+/// 캐릭터 성별 — 이미지 선택에 사용
+enum CharacterGender { female, male }
 
-  /// 윤곽선·그림자에 쓰이는 더 진한 톤
-  final Color furAccent;
-
-  /// 배 부분(약간 더 밝은 톤) — null이면 fur과 동일하게 처리
-  final Color? bellyColor;
-
-  /// 전체 크기 배율 (1.0 기준, 곰·판다 = 큼, 햄스터·개구리 = 작음)
-  final double bodyScale;
-
-  /// 몸통 폭 배율 (1.0 기준, 곰·개구리 = 통통, 토끼·여우 = 슬림)
-  final double torsoAspect;
-
-  /// 다리 길이 배율 (1.0 기준, 토끼 = 김, 개구리·햄스터 = 짧음)
-  final double legLengthRatio;
-
-  /// 머리 크기 배율 (1.0 기준, 햄스터 = 머리 큼)
-  final double headSize;
-
-  const Animal({
-    required this.id,
-    required this.emoji,
-    required this.name,
-    required this.furColor,
-    required this.furAccent,
-    this.bellyColor,
-    this.bodyScale = 1.0,
-    this.torsoAspect = 1.0,
-    this.legLengthRatio = 1.0,
-    this.headSize = 1.0,
-  });
+extension CharacterGenderX on CharacterGender {
+  String get label => switch (this) {
+    CharacterGender.female => '여자',
+    CharacterGender.male   => '남자',
+  };
+  String get assetPath => switch (this) {
+    CharacterGender.female => 'assets/characters/woman.webp',
+    CharacterGender.male   => 'assets/characters/man.webp',
+  };
 }
 
-final List<Animal> allAnimals = const [
-  // 토끼 — 슬림하고 다리 김. 흰 털, 약간 분홍빛.
-  Animal(
-    id: 'rabbit', emoji: '🐰', name: '토끼',
-    furColor:  Color(0xFFFAF1E8),
-    furAccent: Color(0xFFC4A993),
-    bellyColor: Color(0xFFFFFAF4),
-    bodyScale: 1.00, torsoAspect: 0.88, legLengthRatio: 1.18, headSize: 1.00,
-  ),
-  // 고양이 — 표준 비율. 옅은 갈색 태비.
-  Animal(
-    id: 'cat', emoji: '🐱', name: '고양이',
-    furColor:  Color(0xFFE2B07C),
-    furAccent: Color(0xFF8C5A30),
-    bellyColor: Color(0xFFF1D2A8),
-    bodyScale: 0.98, torsoAspect: 0.95, legLengthRatio: 1.00, headSize: 1.00,
-  ),
-  // 강아지 — 약간 통통. 골든 톤.
-  Animal(
-    id: 'dog', emoji: '🐶', name: '강아지',
-    furColor:  Color(0xFFD2A26B),
-    furAccent: Color(0xFF7B5128),
-    bellyColor: Color(0xFFEBC691),
-    bodyScale: 1.00, torsoAspect: 1.02, legLengthRatio: 0.98, headSize: 1.00,
-  ),
-  // 곰 — 크고 통통. 갈색.
-  Animal(
-    id: 'bear', emoji: '🐻', name: '곰',
-    furColor:  Color(0xFFA6794D),
-    furAccent: Color(0xFF5E3D1F),
-    bellyColor: Color(0xFFC9A87E),
-    bodyScale: 1.12, torsoAspect: 1.20, legLengthRatio: 0.90, headSize: 0.98,
-  ),
-  // 여우 — 슬림. 주황색.
-  Animal(
-    id: 'fox', emoji: '🦊', name: '여우',
-    furColor:  Color(0xFFD46B3D),
-    furAccent: Color(0xFF8A381A),
-    bellyColor: Color(0xFFF2D1B6),
-    bodyScale: 0.99, torsoAspect: 0.92, legLengthRatio: 1.05, headSize: 1.00,
-  ),
-  // 판다 — 크고 둥글. 흰색에 회색 강조.
-  Animal(
-    id: 'panda', emoji: '🐼', name: '판다',
-    furColor:  Color(0xFFF0F0F0),
-    furAccent: Color(0xFF454545),
-    bellyColor: Color(0xFFFFFFFF),
-    bodyScale: 1.10, torsoAspect: 1.18, legLengthRatio: 0.92, headSize: 1.02,
-  ),
-  // 햄스터 — 작고 둥글. 머리가 상대적으로 큼. 골든 탄.
-  Animal(
-    id: 'hamster', emoji: '🐹', name: '햄스터',
-    furColor:  Color(0xFFE0B274),
-    furAccent: Color(0xFF9C7138),
-    bellyColor: Color(0xFFF1D5A4),
-    bodyScale: 0.86, torsoAspect: 1.12, legLengthRatio: 0.80, headSize: 1.14,
-  ),
-  // 개구리 — 작고 squat (낮고 옆으로 넓음). 다리 짧음. 녹색.
-  Animal(
-    id: 'frog', emoji: '🐸', name: '개구리',
-    furColor:  Color(0xFF8DBB6A),
-    furAccent: Color(0xFF466F2E),
-    bellyColor: Color(0xFFD8E9B4),
-    bodyScale: 0.92, torsoAspect: 1.28, legLengthRatio: 0.72, headSize: 1.05,
-  ),
+/// 머리 스타일 — 동물의숲 스타일 사람 캐릭터에 적용
+enum HairStyle { shortBoy, bob, long, pigtails }
+
+extension HairStyleX on HairStyle {
+  String get label => switch (this) {
+    HairStyle.shortBoy => '숏컷',
+    HairStyle.bob      => '단발',
+    HairStyle.long     => '긴머리',
+    HairStyle.pigtails => '양갈래',
+  };
+  String get emoji => switch (this) {
+    HairStyle.shortBoy => '✂️',
+    HairStyle.bob      => '💆',
+    HairStyle.long     => '👱',
+    HairStyle.pigtails => '🎀',
+  };
+}
+
+class HairColorOption {
+  final String id;
+  final String label;
+  final Color color;
+  const HairColorOption({required this.id, required this.label, required this.color});
+}
+
+final List<HairColorOption> allHairColors = const [
+  HairColorOption(id: 'brown',  label: '갈색',   color: Color(0xFF5C3318)),
+  HairColorOption(id: 'auburn', label: '적갈색', color: Color(0xFF8B3A1A)),
+  HairColorOption(id: 'black',  label: '검정',   color: Color(0xFF1A1008)),
+  HairColorOption(id: 'blonde', label: '금발',   color: Color(0xFFD4A832)),
+  HairColorOption(id: 'red',    label: '빨강',   color: Color(0xFFB83232)),
+  HairColorOption(id: 'pink',   label: '핑크',   color: Color(0xFFD46A8A)),
+  HairColorOption(id: 'blue',   label: '파랑',   color: Color(0xFF3A6AB0)),
+  HairColorOption(id: 'white',  label: '흰색',   color: Color(0xFFD8D4C8)),
 ];
 
-Animal? animalById(String? id) {
-  if (id == null) return null;
-  for (final a in allAnimals) {
-    if (a.id == id) return a;
-  }
-  return null;
+class SkinColorOption {
+  final String id;
+  final String label;
+  final Color color;
+  const SkinColorOption({required this.id, required this.label, required this.color});
+}
+
+final List<SkinColorOption> allSkinColors = const [
+  SkinColorOption(id: 'light',  label: '밝은',   color: Color(0xFFF5C9A0)),
+  SkinColorOption(id: 'medium', label: '보통',   color: Color(0xFFDBA078)),
+  SkinColorOption(id: 'tan',    label: '구릿빛', color: Color(0xFFBF7D50)),
+  SkinColorOption(id: 'dark',   label: '어두운', color: Color(0xFF7A4E2D)),
+];
+
+/// 캐릭터 프로필 — 사람 한 명의 외형 정보 + 장착 아이템
+class CharacterProfile {
+  String name;
+  CharacterGender gender;
+  HairStyle hairStyle;
+  String hairColorId;
+  String skinColorId;
+  Map<String, String?> equipped;
+
+  CharacterProfile({
+    required this.name,
+    this.gender = CharacterGender.female,
+    this.hairStyle = HairStyle.shortBoy,
+    this.hairColorId = 'brown',
+    this.skinColorId = 'light',
+    Map<String, String?>? equipped,
+  }) : equipped = equipped ?? {
+    'hat': null,
+    'top': 'char_top_basic',
+    'bottom': 'char_bottom_basic',
+    'accessory': null,
+  };
+
+  Color get hairColor =>
+      allHairColors.firstWhere((h) => h.id == hairColorId,
+          orElse: () => allHairColors.first).color;
+
+  Color get skinColor =>
+      allSkinColors.firstWhere((s) => s.id == skinColorId,
+          orElse: () => allSkinColors.first).color;
 }
 
 // ─────────────────────────── Wardrobe Item ───────────────────────────────────
@@ -338,30 +314,46 @@ class AppState {
     'badge': null,
   };
 
-  // ── 캐릭터/방 신규 시스템 ─────────────────────────────────────────────────
-  /// 선택된 동물 (캐릭터 베이스). null = 아직 미선택 → picker 띄워야 함
-  String? selectedAnimalId;
+  // ── 두 캐릭터 프로필 ──────────────────────────────────────────────────────
+  List<CharacterProfile> characters = [
+    CharacterProfile(
+      name: '나',
+      gender: CharacterGender.female,
+      hairStyle: HairStyle.bob,
+      hairColorId: 'brown',
+      skinColorId: 'light',
+      equipped: {
+        'hat': null,
+        'top': 'char_top_basic',
+        'bottom': 'char_bottom_basic',
+        'accessory': null,
+      },
+    ),
+    CharacterProfile(
+      name: '친구',
+      gender: CharacterGender.male,
+      hairStyle: HairStyle.shortBoy,
+      hairColorId: 'auburn',
+      skinColorId: 'light',
+      equipped: {
+        'hat': null,
+        'top': 'char_top_basic',
+        'bottom': 'char_bottom_basic',
+        'accessory': null,
+      },
+    ),
+  ];
 
-  Animal? get selectedAnimal => animalById(selectedAnimalId);
+  /// 현재 편집 중인 캐릭터 인덱스 (0 또는 1)
+  int selectedCharacterIndex = 0;
 
-  void selectAnimal(String id) {
-    selectedAnimalId = id;
-  }
+  CharacterProfile get currentCharacter => characters[selectedCharacterIndex];
 
   /// 잠금 해제된 캐릭터/방 아이템 id 집합 (실 경험을 통해서만 해제됨)
   Set<String> wardrobeUnlocked = {
-    // 시드 데이터 — '첫 경험' 한 번 했다는 가정으로 기본 의상 몇 개 해제
     'char_top_basic',
     'char_bottom_basic',
     'room_wall_empty_paint',
-  };
-
-  /// 캐릭터에 장착된 아이템 (slot → itemId)
-  Map<String, String?> characterEquipped = {
-    'hat': null,
-    'top': 'char_top_basic',
-    'bottom': 'char_bottom_basic',
-    'accessory': null,
   };
 
   /// 방에 배치된 아이템 (slot → itemId)
@@ -399,9 +391,9 @@ class AppState {
     return true;
   }
 
-  /// 캐릭터 슬롯 장착 / 해제 (id == null 이면 해제)
-  void equipCharacter(String slot, String? id) =>
-      characterEquipped[slot] = id;
+  /// 특정 캐릭터 슬롯 장착 / 해제 (id == null 이면 해제)
+  void equipCharacter(int charIndex, String slot, String? id) =>
+      characters[charIndex].equipped[slot] = id;
 
   /// 방 슬롯 배치 / 제거
   void equipRoom(String slot, String? id) => roomEquipped[slot] = id;
@@ -417,10 +409,12 @@ class AppState {
     return filled / roomSlots.length;
   }
 
-  /// 캐릭터가 얼마나 꾸며졌는지 (0.0 ~ 1.0)
+  /// 두 캐릭터 합산 완성도 (0.0 ~ 1.0)
   double get characterFillRatio {
-    final filled = characterEquipped.values.where((v) => v != null).length;
-    return filled / characterSlots.length;
+    final total = characterSlots.length * characters.length;
+    final filled = characters.fold<int>(
+        0, (sum, c) => sum + c.equipped.values.where((v) => v != null).length);
+    return filled / total;
   }
 }
 
