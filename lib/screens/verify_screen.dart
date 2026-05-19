@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../models/models.dart';
 
 class VerifyScreen extends StatefulWidget {
@@ -106,7 +106,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: exp.difficulty.color.withOpacity(0.15),
+                        color: exp.difficulty.color.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(exp.difficulty.label,

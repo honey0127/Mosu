@@ -21,14 +21,22 @@ class _KeywordScreenState extends State<KeywordScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final remaining = _minSelect - _selected.length;
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F7),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const Text('지금 끌리는 게 뭐야?',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20)),
+        backgroundColor: const Color(0xFFF5F5F7),
+        elevation: 0,
+        title: const Text(
+          '지금 끌리는 게 뭐야?',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+        ),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── 선택 상태 표시 ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
@@ -46,13 +54,20 @@ class _KeywordScreenState extends State<KeywordScreen> {
               ],
             ),
           ),
+
+          // ── 키워드 칩 목록 ─────────────────────────────────────────
           Expanded(
-            child: _KeywordCloud(
-              keywords: allKeywords,
-              selected: _selected,
-              onTap: _toggle,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: _StaggeredChipGrid(
+                keywords: allKeywords,
+                selected: _selected,
+                onTap: _toggle,
+              ),
             ),
           ),
+
+          // ── 다음 버튼 ──────────────────────────────────────────────
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -78,7 +93,7 @@ class _KeywordScreenState extends State<KeywordScreen> {
                   child: Text(
                     _selected.length >= _minSelect
                         ? '경험 찾기 →'
-                        : '${_minSelect - _selected.length}개 더 선택해요',
+                        : '$remaining개 더 선택해요',
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w600),
                   ),
@@ -92,139 +107,149 @@ class _KeywordScreenState extends State<KeywordScreen> {
   }
 }
 
-// ─── 부유 키워드 클라우드 ─────────────────────────────────────────────────────
-class _KeywordCloud extends StatefulWidget {
+// ─── 지그재그 칩 그리드 ──────────────────────────────────────────────────────
+class _StaggeredChipGrid extends StatelessWidget {
   final List<Keyword> keywords;
   final Set<String> selected;
   final void Function(String) onTap;
 
-  const _KeywordCloud(
-      {required this.keywords, required this.selected, required this.onTap});
+  const _StaggeredChipGrid({
+    required this.keywords,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
-  State<_KeywordCloud> createState() => _KeywordCloudState();
+  Widget build(BuildContext context) {
+    final rows = _buildRows(keywords);
+    int chipIdx = 0;
+    final rowWidgets = <Widget>[];
+
+    for (int r = 0; r < rows.length; r++) {
+      rowWidgets.add(
+        Padding(
+          padding: EdgeInsets.only(left: (r % 2 == 1) ? 20.0 : 0.0),
+          child: Wrap(
+            spacing: 10,
+            runSpacing: 0,
+            children: rows[r].map((kw) {
+              return _KeywordChip(
+                key: ValueKey(kw.id),
+                label: kw.label,
+                isSelected: selected.contains(kw.id),
+                onTap: () => onTap(kw.id),
+                index: chipIdx++,
+              );
+            }).toList(),
+          ),
+        ),
+      );
+      rowWidgets.add(const SizedBox(height: 12));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: rowWidgets,
+    );
+  }
+
+  List<List<Keyword>> _buildRows(List<Keyword> kws) {
+    final rng = Random(7);
+    final result = <List<Keyword>>[];
+    int i = 0;
+    while (i < kws.length) {
+      final count = 3 + rng.nextInt(2);
+      result.add(kws.sublist(i, min(i + count, kws.length)));
+      i += count;
+    }
+    return result;
+  }
 }
 
-class _KeywordCloudState extends State<_KeywordCloud>
-    with TickerProviderStateMixin {
-  late final List<AnimationController> _ctrls;
-  late final List<Animation<double>> _floats;
+// ─── 키워드 칩 ────────────────────────────────────────────────────────────────
+class _KeywordChip extends StatefulWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final int index;
 
-  // 30개 키워드 위치 (너비·높이 대비 비율)
-  static const List<List<double>> _frac = [
-    [0.03, 0.02], [0.38, 0.00], [0.65, 0.03], [0.82, 0.00],
-    [0.08, 0.16], [0.30, 0.14], [0.55, 0.12], [0.75, 0.15],
-    [0.01, 0.30], [0.22, 0.28], [0.46, 0.27], [0.68, 0.30], [0.86, 0.27],
-    [0.10, 0.44], [0.33, 0.42], [0.57, 0.41], [0.78, 0.44],
-    [0.04, 0.57], [0.26, 0.56], [0.50, 0.55], [0.72, 0.57], [0.90, 0.55],
-    [0.12, 0.70], [0.35, 0.69], [0.60, 0.68], [0.80, 0.70],
-    [0.05, 0.83], [0.28, 0.82], [0.53, 0.81], [0.76, 0.83],
-  ];
+  const _KeywordChip({
+    super.key,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.index,
+  });
+
+  @override
+  State<_KeywordChip> createState() => _KeywordChipState();
+}
+
+class _KeywordChipState extends State<_KeywordChip>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _floatCtrl;
 
   @override
   void initState() {
     super.initState();
-    final rng = Random(42);
-
-    _ctrls = List.generate(widget.keywords.length, (i) {
-      final ms = 1600 + rng.nextInt(1200);
-      return AnimationController(
-          vsync: this, duration: Duration(milliseconds: ms));
-    });
-
-    _floats = _ctrls
-        .map((c) => Tween<double>(begin: -8, end: 8).animate(
-        CurvedAnimation(parent: c, curve: Curves.easeInOut)))
-        .toList();
-
-    for (var i = 0; i < _ctrls.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 80), () {
-        if (mounted) _ctrls[i].repeat(reverse: true);
-      });
-    }
+    _floatCtrl = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 1800 + (widget.index % 8) * 180),
+    );
+    _floatCtrl.value = (widget.index * 0.17) % 1.0;
+    _floatCtrl.repeat();
   }
 
   @override
   void dispose() {
-    for (final c in _ctrls) c.dispose();
+    _floatCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final w = constraints.maxWidth;
-      final h = constraints.maxHeight;
-
-      return Stack(
-        children: List.generate(widget.keywords.length, (i) {
-          final frac = _frac[i % _frac.length];
-          final kw = widget.keywords[i];
-          final isSelected = widget.selected.contains(kw.id);
-          final left = (frac[0] * (w - 130)).clamp(0.0, w - 130);
-          final top = (frac[1] * (h - 50)).clamp(0.0, h - 60);
-
-          return AnimatedBuilder(
-            animation: _floats[i],
-            builder: (_, child) => Positioned(
-              left: left,
-              top: top + _floats[i].value,
-              child: child!,
+    return AnimatedBuilder(
+      animation: _floatCtrl,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(0, sin(_floatCtrl.value * 2 * pi) * 4.0),
+        child: child,
+      ),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          decoration: BoxDecoration(
+            color: widget.isSelected ? const Color(0xFF7F77DD) : Colors.white,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: widget.isSelected
+                  ? const Color(0xFF534AB7)
+                  : Colors.grey.shade200,
+              width: widget.isSelected ? 1.5 : 1,
             ),
-            child: _KeywordChip(
-              label: kw.label,
-              isSelected: isSelected,
-              onTap: () => widget.onTap(kw.id),
-            ),
-          );
-        }),
-      );
-    });
-  }
-}
-
-// ─── 키워드 칩 ────────────────────────────────────────────────────────────────
-class _KeywordChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _KeywordChip(
-      {required this.label, required this.isSelected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF7F77DD) : Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: isSelected
-                ? const Color(0xFF534AB7)
-                : Colors.grey.shade300,
-            width: isSelected ? 1.5 : 1,
+            boxShadow: [
+              BoxShadow(
+                color: widget.isSelected
+                    ? const Color(0xFF7F77DD).withValues(alpha: 0.30)
+                    : Colors.black.withValues(alpha: 0.06),
+                blurRadius: widget.isSelected ? 12 : 8,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected
-                  ? const Color(0xFF7F77DD).withValues(alpha: 0.35)
-                  : Colors.black.withValues(alpha: 0.07),
-              blurRadius: isSelected ? 14 : 6,
-              offset: const Offset(0, 3),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              color: widget.isSelected
+                  ? Colors.white
+                  : const Color(0xFF2A2A2A),
+              fontWeight:
+                  widget.isSelected ? FontWeight.w600 : FontWeight.w400,
+              fontSize: 15,
             ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black87,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 13,
           ),
         ),
       ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../models/models.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -43,7 +43,7 @@ class HomeScreen extends StatelessWidget {
                               horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color:
-                            const Color(0xFF7F77DD).withOpacity(0.12),
+                            const Color(0xFF7F77DD).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -132,7 +132,7 @@ class HomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList.separated(
                   itemCount: completed.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (_, i) => _CompletedCard(exp: completed[i]),
                 ),
               ),
@@ -256,7 +256,7 @@ class _CompletedCard extends StatelessWidget {
             padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: exp.difficulty.color.withOpacity(0.1),
+              color: exp.difficulty.color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text('+${exp.difficulty.points}P',

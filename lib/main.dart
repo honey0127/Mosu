@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
-import 'screens/main_shell.dart';
-
-export 'screens/main_shell.dart'; // 하위 호환용 (필요 시)
 
 void main() => runApp(const DriftApp());
 
