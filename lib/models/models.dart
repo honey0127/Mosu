@@ -330,6 +330,7 @@ class AppState {
   int totalEarned = 150;
   List<String> completedIds = ['exp_001'];
   Set<String> unlockedIds = {'bg_forest', 'obj_seed'};
+  List<String> preferredKeywordLabels = [];
   Map<String, String?> equipped = {
     'background': 'bg_forest',
     'slot1': 'obj_seed',
@@ -456,45 +457,6 @@ final List<Keyword> allKeywords = [
   const Keyword(id: 'k28', label: '처음 해보는', emoji: '🌱', category: 'challenge', size: 1.4),
   const Keyword(id: 'k29', label: '무계획',      emoji: '🎲', category: 'challenge', size: 1.0),
   const Keyword(id: 'k30', label: '두근두근',    emoji: '💓', category: 'challenge', size: 1.15),
-];
-
-// ─────────────────────────── Sample Experiences ───────────────────────────────
-final List<Experience> allExperiences = [
-  const Experience(
-    id: 'exp_001', isFit: true,
-    title: '새벽 3시 편의점 산책',
-    subtitle: '아무도 없는 골목을 혼자 걷기',
-    matchedKeywords: ['혼자', '새벽', '도심', '느린'],
-    difficulty: Difficulty.easy, energy: 1, courage: 1, cost: 1,
-  ),
-  const Experience(
-    id: 'exp_002', isFit: false,
-    title: '도자기 원데이 클래스',
-    subtitle: '처음 만나는 사람들과 흙 빚기',
-    matchedKeywords: ['함께', '낮', '몸쓰는'],
-    difficulty: Difficulty.medium, energy: 2, courage: 2, cost: 2,
-  ),
-  const Experience(
-    id: 'exp_003', isFit: true,
-    title: '낯선 동네 무작정 내리기',
-    subtitle: '지도 없이 처음 보는 역에서 2시간',
-    matchedKeywords: ['혼자', '낯선 곳', '도전적'],
-    difficulty: Difficulty.medium, energy: 1, courage: 3, cost: 1,
-  ),
-  const Experience(
-    id: 'exp_004', isFit: false,
-    title: '48시간 디지털 디톡스',
-    subtitle: '스마트폰 없이 이틀을 버텨보기',
-    matchedKeywords: ['혼자', '도전적', '느린'],
-    difficulty: Difficulty.hard, energy: 1, courage: 3, cost: 1,
-  ),
-  const Experience(
-    id: 'exp_005', isFit: true,
-    title: '새벽 수영장 첫 도전',
-    subtitle: '아침 6시 수영장에서 수영 배우기',
-    matchedKeywords: ['새벽', '몸쓰는', '도전적'],
-    difficulty: Difficulty.hard, energy: 3, courage: 2, cost: 2,
-  ),
 ];
 
 final List<DecoItem> allItems = [
