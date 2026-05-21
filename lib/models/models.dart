@@ -326,14 +326,14 @@ class AppState {
   static final AppState i = AppState._();
   AppState._();
 
-  int points = 150;
-  int totalEarned = 150;
-  List<String> completedIds = ['exp_001'];
-  Set<String> unlockedIds = {'bg_forest', 'obj_seed'};
+  int points = 0;
+  int totalEarned = 0;
+  List<String> completedIds = [];
+  Set<String> unlockedIds = {};
   List<String> preferredKeywordLabels = [];
   Map<String, String?> equipped = {
-    'background': 'bg_forest',
-    'slot1': 'obj_seed',
+    'background': null,
+    'slot1': null,
     'slot2': null,
     'slot3': null,
     'badge': null,
@@ -350,35 +350,26 @@ class AppState {
   }
 
   /// 잠금 해제된 캐릭터/방 아이템 id 집합 (실 경험을 통해서만 해제됨)
-  Set<String> wardrobeUnlocked = {
-    // 시드 데이터 — '첫 경험' 한 번 했다는 가정으로 기본 의상 몇 개 해제
-    'char_top_basic',
-    'char_bottom_basic',
-    'room_wall_empty_paint',
-  };
+  Set<String> wardrobeUnlocked = {};
 
   /// 캐릭터에 장착된 아이템 (slot → itemId)
   Map<String, String?> characterEquipped = {
     'hat': null,
-    'top': 'char_top_basic',
-    'bottom': 'char_bottom_basic',
+    'top': null,
+    'bottom': null,
     'accessory': null,
   };
 
   /// 방에 배치된 아이템 (slot → itemId)
   Map<String, String?> roomEquipped = {
-    'wall': 'room_wall_empty_paint',
+    'wall': null,
     'desk': null,
     'floor': null,
     'window': null,
   };
 
   /// 완료한 경험의 카테고리 카운트 (어떤 영역을 얼마나 채웠는지 추적)
-  Map<ExperienceCategory, int> categoryCounts = {
-    ExperienceCategory.cooking: 0,
-    ExperienceCategory.exercise: 0,
-    ExperienceCategory.nature: 1, // exp_001 (새벽 산책)을 nature로 가정
-  };
+  Map<ExperienceCategory, int> categoryCounts = {};
 
   void addPoints(int p) {
     points += p;

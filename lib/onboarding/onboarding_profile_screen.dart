@@ -76,7 +76,7 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
   }
 
   // ── 완료 처리 ─────────────────────────────────────────────────────────────
-  void _finish() {
+  Future<void> _finish() async {
     final age = int.tryParse(_ageCtrl.text.trim());
     if (age == null || age < 1 || age > 120) {
       setState(() => _error = '올바른 나이를 입력해 주세요.');
@@ -100,19 +100,20 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
         ? '$_selectedJob · ${_jobDetailCtrl.text.trim()}'
         : _selectedJob!;
 
-    AuthService.saveProfile(
+    await AuthService.saveProfile(
       userId: widget.userId,
       age: age,
       mbti: mbti,
       job: jobFull,
       hobbies: _selHobbies.toList(),
     );
-    AuthService.completeOnboarding(widget.userId, []);
+    await AuthService.completeOnboarding(widget.userId, []);
 
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const MainShell(),
-        transitionsBuilder: (_, anim, __, child) =>
+        pageBuilder: (_, _, _) => const MainShell(),
+        transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
