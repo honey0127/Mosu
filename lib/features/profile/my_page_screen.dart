@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/models.dart';
-import '../data/experience_data.dart';
-import '../services/auth_service.dart';
+import '../../models/app_state.dart';
+import '../../models/experience.dart';
+import '../../data/experience_data.dart';
+import '../../services/auth_service.dart';
 import '../onboarding/onboarding_profile_screen.dart';
 
 class MyPageScreen extends StatefulWidget {

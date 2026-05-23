@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
-import '../models/models.dart';
-import '../data/experience_data.dart';
+import '../../models/experience.dart';
+import '../../models/app_state.dart';
+import '../../models/keyword.dart';
+import '../../data/experience_data.dart';
 import 'verify_screen.dart';
 
 class RecommendationScreen extends StatelessWidget {

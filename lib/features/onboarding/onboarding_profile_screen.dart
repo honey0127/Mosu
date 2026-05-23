@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/auth_service.dart';
-import '../screens/main_shell.dart';
+import '../../services/auth_service.dart';
+import '../shell/main_shell.dart';
 
 class OnboardingProfileScreen extends StatefulWidget {
   final String userId;

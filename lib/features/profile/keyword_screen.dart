@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../models/models.dart';
-import 'recommendation_screen.dart';
+import '../../models/keyword.dart';
+import '../experience/recommendation_screen.dart';
 
 class KeywordScreen extends StatefulWidget {
   const KeywordScreen({super.key});

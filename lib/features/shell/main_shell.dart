@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
-import 'my_page_screen.dart';
-import 'character_room_screen.dart';
-import 'community_screen.dart';
+import '../home/home_screen.dart';
+import '../profile/my_page_screen.dart';
+import '../character/character_room_screen.dart';
+import '../community/community_screen.dart';
 
 /// 로그인·온보딩 통과 후 보이는 앱 본체
 /// 탭 구조: 홈 / 내 공간 / 커뮤니티 / 마이
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  final int initialIndex;
+  const MainShell({super.key, this.initialIndex = 0});
 
   @override
   State<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends State<MainShell> {
-  int _index = 0;
+  late int _index = 0;
+
+  @override
+  void initState() {                               // ← 추가
+    super.initState();
+    _index = widget.initialIndex;                  // ← 추가
+  }
 
   Widget get _body {
     switch (_index) {

@@ -1,7 +1,9 @@
 ﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/models.dart';
+import '../../models/experience.dart';
+import '../../models/app_state.dart';
+import '../shell/main_shell.dart';
 
 class VerifyScreen extends StatefulWidget {
   final Experience exp;
@@ -185,12 +187,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
       barrierDismissible: false,
       builder: (_) => _RewardDialog(
         exp: widget.exp,
-        onClose: () {
-          Navigator.of(context)
-            ..pop()
-            ..pop()
-            ..pop()
-            ..pop();
+        onClose: () {                                      // ← 이 부분 수정
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => const MainShell(initialIndex: 3),
+            ),
+                (route) => false,
+          );
         },
       ),
     );
@@ -527,7 +530,7 @@ class _RewardDialog extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: onClose,
-                child: const Text('마이 페이지에서 꾸미기 →',
+                child: const Text('도장 확인하러 가기! →',
                     style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),

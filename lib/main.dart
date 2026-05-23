@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
+import 'features/shell/splash_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {

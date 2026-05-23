@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../models/models.dart';
+import '../../models/experience.dart';
+import '../../models/animal.dart';
+import '../../models/app_state.dart';
+import '../../models/wardrobe_item.dart';
 import 'animal_picker_screen.dart';
 
 /// 내 공간 — 캐릭터(외면)가 방(내면) 안에 서있는 한 장면.

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../data/experience_data.dart';
-import '../models/models.dart';
-import '../services/auth_service.dart';
-import 'verify_screen.dart';
+import '../../data/experience_data.dart';
+import '../../models/experience.dart';
+import '../../models/app_state.dart';
+import '../../services/auth_service.dart';
+import '../experience/verify_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
