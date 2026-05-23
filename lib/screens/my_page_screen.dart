@@ -1,5 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../data/experience_data.dart';
+import '../services/auth_service.dart';
+import '../onboarding/onboarding_profile_screen.dart';
 
 class MyPageScreen extends StatefulWidget {
   const MyPageScreen({super.key});
@@ -27,6 +30,8 @@ class _MyPageScreenState extends State<MyPageScreen>
   @override
   Widget build(BuildContext context) {
     final state = AppState.i;
+    final userId = AuthService.currentUserId ?? '';
+    final nickname = AuthService.getNickname(userId);
 
     return Scaffold(
       body: SafeArea(
@@ -37,7 +42,6 @@ class _MyPageScreenState extends State<MyPageScreen>
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
               child: Row(
                 children: [
-                  // 아바타
                   Container(
                     width: 56,
                     height: 56,
@@ -46,25 +50,21 @@ class _MyPageScreenState extends State<MyPageScreen>
                       color: Color(0xFFEEEDFE),
                     ),
                     child: const Center(
-                        child: Text('🧭',
-                            style: TextStyle(fontSize: 28))),
+                        child: Text('🧭', style: TextStyle(fontSize: 28))),
                   ),
                   const SizedBox(width: 14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('탐험가 Lv.${state.level}',
+                      Text(nickname,
                           style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700)),
+                              fontSize: 18, fontWeight: FontWeight.w700)),
                       Text('총 ${state.completedIds.length}개 경험 완료',
                           style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade500)),
+                              fontSize: 13, color: Colors.grey.shade500)),
                     ],
                   ),
                   const Spacer(),
-                  // 포인트 표시
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
@@ -84,7 +84,7 @@ class _MyPageScreenState extends State<MyPageScreen>
             // ── 탭 바 ──────────────────────────────────────────────────
             TabBar(
               controller: _tab,
-              tabs: const [Tab(text: '내 공간'), Tab(text: '아이템 상점')],
+              tabs: const [Tab(text: '경험 도장'), Tab(text: '내 설정')],
               indicatorColor: const Color(0xFF7F77DD),
               labelColor: const Color(0xFF7F77DD),
               unselectedLabelColor: Colors.grey,
@@ -95,8 +95,8 @@ class _MyPageScreenState extends State<MyPageScreen>
               child: TabBarView(
                 controller: _tab,
                 children: [
-                  _MySpaceTab(onUpdate: () => setState(() {})),
-                  _ShopTab(onUpdate: () => setState(() {})),
+                  _StampBoardTab(),
+                  _SettingsTab(onReset: () => setState(() {})),
                 ],
               ),
             ),
@@ -107,473 +107,561 @@ class _MyPageScreenState extends State<MyPageScreen>
   }
 }
 
-// ═══════════════════════════ 내 공간 탭 ══════════════════════════════════════
-class _MySpaceTab extends StatelessWidget {
-  final VoidCallback onUpdate;
-  const _MySpaceTab({required this.onUpdate});
+// ═══════════════════════════ 경험 도장판 탭 ══════════════════════════════════
 
-  DecoItem? _find(String? id) {
-    if (id == null) return null;
-    try {
-      return allItems.firstWhere((it) => it.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
+class _StampBoardTab extends StatelessWidget {
+  const _StampBoardTab();
 
   @override
   Widget build(BuildContext context) {
-    final state = AppState.i;
-    final bg = _find(state.equipped['background']);
-    final s1 = _find(state.equipped['slot1']);
-    final s2 = _find(state.equipped['slot2']);
-    final s3 = _find(state.equipped['slot3']);
-    final badge = _find(state.equipped['badge']);
+    final completed = AppState.i.completedIds.toSet();
+    final total = allExperiences.length;
+    final doneCount = allExperiences.where((e) => completed.contains(e.id)).length;
 
-    final unlockedBgs = allItems
-        .where((it) =>
-    it.slot == 'background' && state.unlockedIds.contains(it.id))
-        .toList();
-    final unlockedObjs = allItems
-        .where((it) =>
-    it.slot == 'object' && state.unlockedIds.contains(it.id))
-        .toList();
-    final unlockedBadges = allItems
-        .where((it) =>
-    it.slot == 'badge' && state.unlockedIds.contains(it.id))
-        .toList();
+    final easy   = allExperiences.where((e) => e.difficulty == Difficulty.easy).toList();
+    final medium = allExperiences.where((e) => e.difficulty == Difficulty.medium).toList();
+    final hard   = allExperiences.where((e) => e.difficulty == Difficulty.hard).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 공간 미리보기 ──────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            height: 220,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Stack(
-              children: [
-                // 배경 이모지 (크게)
-                if (bg != null)
-                  Positioned.fill(
-                    child: Center(
-                      child: Text(bg.emoji,
-                          style: const TextStyle(fontSize: 90)),
-                    ),
-                  ),
-                // 뱃지 — 우상단
-                if (badge != null)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(badge.emoji,
-                              style: const TextStyle(fontSize: 14)),
-                          const SizedBox(width: 4),
-                          Text(badge.name,
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ),
-                  ),
-                // 오브젝트 슬롯 3개 — 하단
-                Positioned(
-                  bottom: 18,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _SlotBox(item: s1),
-                      _SlotBox(item: s2),
-                      _SlotBox(item: s3),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          // ── 진행 요약 ──────────────────────────────────────────────
+          _ProgressBanner(done: doneCount, total: total),
+          const SizedBox(height: 28),
+
+          _StampSection(
+            difficultyLabel: '쉬움',
+            difficultyEmoji: '🌿',
+            color: const Color(0xFF1D9E75),
+            bgColor: const Color(0xFFE8F8F2),
+            experiences: easy,
+            completed: completed,
           ),
+          const SizedBox(height: 28),
 
-          const SizedBox(height: 24),
-
-          // ── 배경 선택 ─────────────────────────────────────────────
-          const Text('배경',
-              style:
-              TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          _HorizontalItemRow(
-            items: unlockedBgs,
-            equippedId: state.equipped['background'],
-            onEquip: (id) {
-              state.equip('background', id);
-              onUpdate();
-            },
+          _StampSection(
+            difficultyLabel: '보통',
+            difficultyEmoji: '⚡',
+            color: const Color(0xFFBA7517),
+            bgColor: const Color(0xFFFFF3E0),
+            experiences: medium,
+            completed: completed,
           ),
+          const SizedBox(height: 28),
 
-          const SizedBox(height: 20),
-
-          // ── 오브젝트 선택 ─────────────────────────────────────────
-          const Text('오브젝트',
-              style:
-              TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          Text('탭하면 빈 슬롯에 순서대로 배치돼요',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-          const SizedBox(height: 8),
-          _HorizontalItemRow(
-            items: unlockedObjs,
-            equippedId: state.equipped['slot1'],
-            onEquip: (id) {
-              // 빈 슬롯에 순차 배치, 꽉 차면 slot1부터 교체
-              if (state.equipped['slot1'] == null) {
-                state.equip('slot1', id);
-              } else if (state.equipped['slot2'] == null) {
-                state.equip('slot2', id);
-              } else if (state.equipped['slot3'] == null) {
-                state.equip('slot3', id);
-              } else {
-                state.equip('slot1', id);
-              }
-              onUpdate();
-            },
+          _StampSection(
+            difficultyLabel: '어려움',
+            difficultyEmoji: '🔥',
+            color: const Color(0xFFD85A30),
+            bgColor: const Color(0xFFFDECE6),
+            experiences: hard,
+            completed: completed,
           ),
-
-          const SizedBox(height: 20),
-
-          // ── 뱃지 선택 ─────────────────────────────────────────────
-          const Text('뱃지',
-              style:
-              TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          _HorizontalItemRow(
-            items: unlockedBadges,
-            equippedId: state.equipped['badge'],
-            onEquip: (id) {
-              state.equip('badge', id);
-              onUpdate();
-            },
-          ),
-
-          const SizedBox(height: 80),
         ],
       ),
     );
   }
 }
 
-// ── 슬롯 박스 (공간 미리보기용) ─────────────────────────────────────────────
-class _SlotBox extends StatelessWidget {
-  final DecoItem? item;
-  const _SlotBox({this.item});
+class _ProgressBanner extends StatelessWidget {
+  final int done;
+  final int total;
+  const _ProgressBanner({required this.done, required this.total});
 
   @override
   Widget build(BuildContext context) {
+    final ratio = done / total;
     return Container(
-      width: 64,
-      height: 64,
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Center(
-        child: item != null
-            ? Text(item!.emoji, style: const TextStyle(fontSize: 30))
-            : Icon(Icons.add, color: Colors.grey.shade300, size: 22),
-      ),
-    );
-  }
-}
-
-// ── 가로 스크롤 아이템 행 ────────────────────────────────────────────────────
-class _HorizontalItemRow extends StatelessWidget {
-  final List<DecoItem> items;
-  final String? equippedId;
-  final void Function(String) onEquip;
-
-  const _HorizontalItemRow(
-      {required this.items,
-        required this.equippedId,
-        required this.onEquip});
-
-  @override
-  Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return Text('잠금 해제된 아이템이 없어요. 상점에서 구매해봐요!',
-          style: TextStyle(color: Colors.grey.shade400, fontSize: 13));
-    }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: items.map((item) {
-          final isEquipped = equippedId == item.id;
-          return GestureDetector(
-            onTap: () => onEquip(item.id),
-            child: Container(
-              margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isEquipped
-                    ? const Color(0xFFEEEDFE)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isEquipped
-                      ? const Color(0xFF7F77DD)
-                      : Colors.grey.shade200,
-                  width: isEquipped ? 2 : 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(item.emoji,
-                      style: const TextStyle(fontSize: 26)),
-                  const SizedBox(height: 4),
-                  Text(item.name,
-                      style: const TextStyle(fontSize: 11)),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════ 아이템 상점 탭 ═══════════════════════════════════
-class _ShopTab extends StatefulWidget {
-  final VoidCallback onUpdate;
-  const _ShopTab({required this.onUpdate});
-
-  @override
-  State<_ShopTab> createState() => _ShopTabState();
-}
-
-class _ShopTabState extends State<_ShopTab> {
-  @override
-  Widget build(BuildContext context) {
-    final state = AppState.i;
-    final locked = allItems
-        .where((it) => !state.unlockedIds.contains(it.id))
-        .toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── 포인트 배너 ────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF7F77DD), Color(0xFF534AB7)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                const Text('⭐', style: TextStyle(fontSize: 26)),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('현재 포인트',
-                        style: TextStyle(
-                            color: Colors.white70, fontSize: 12)),
-                    Text('${state.points}P',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700)),
-                  ],
-                ),
-                const Spacer(),
-                const Text('경험 완료로\n포인트를 모아요 →',
-                    style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        height: 1.6)),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          Text('구매 가능 아이템 (${locked.length}개)',
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-
-          if (locked.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(48),
-                child: Column(
-                  children: [
-                    Text('🎉', style: TextStyle(fontSize: 48)),
-                    SizedBox(height: 12),
-                    Text('모든 아이템을 획득했어요!',
-                        style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.15,
-              ),
-              itemCount: locked.length,
-              itemBuilder: (_, i) {
-                final item = locked[i];
-                final canAfford = state.points >= item.cost;
-                return _ShopCard(
-                  item: item,
-                  canAfford: canAfford,
-                  onBuy: () {
-                    if (state.buy(item.id, item.cost)) {
-                      setState(() {});
-                      widget.onUpdate();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '${item.emoji} ${item.name} 획득! 내 공간에서 꾸며봐요'),
-                          backgroundColor: const Color(0xFF7F77DD),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                              '포인트가 부족해요. 경험을 더 완료해봐요!'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
-            ),
-
-          const SizedBox(height: 80),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 상점 아이템 카드 ─────────────────────────────────────────────────────────
-class _ShopCard extends StatelessWidget {
-  final DecoItem item;
-  final bool canAfford;
-  final VoidCallback onBuy;
-
-  const _ShopCard(
-      {required this.item,
-        required this.canAfford,
-        required this.onBuy});
-
-  String get _slotLabel => switch (item.slot) {
-    'background' => '배경',
-    'object'     => '오브젝트',
-    _            => '뱃지',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7F77DD), Color(0xFF534AB7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(item.emoji, style: const TextStyle(fontSize: 28)),
+              const Text('🗂️', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 10),
+              Text('$done / $total 완료',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700)),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(_slotLabel,
-                    style: TextStyle(
-                        fontSize: 10, color: Colors.grey.shade500)),
-              ),
+              Text('${(ratio * 100).round()}%',
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 14)),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(item.name,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 13)),
-          Text(item.hint,
-              style: TextStyle(
-                  fontSize: 10, color: Colors.grey.shade400)),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            height: 32,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: canAfford
-                    ? const Color(0xFF7F77DD)
-                    : Colors.grey.shade200,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                padding: EdgeInsets.zero,
-              ),
-              onPressed: canAfford ? onBuy : null,
-              child: Text(
-                '⭐ ${item.cost}P',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: canAfford
-                      ? Colors.white
-                      : Colors.grey.shade400,
-                ),
-              ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 7,
+              backgroundColor: Colors.white.withValues(alpha: 0.25),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Colors.white),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StampSection extends StatelessWidget {
+  final String difficultyLabel;
+  final String difficultyEmoji;
+  final Color color;
+  final Color bgColor;
+  final List<Experience> experiences;
+  final Set<String> completed;
+
+  const _StampSection({
+    required this.difficultyLabel,
+    required this.difficultyEmoji,
+    required this.color,
+    required this.bgColor,
+    required this.experiences,
+    required this.completed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final doneCount = experiences.where((e) => completed.contains(e.id)).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 섹션 헤더
+        Row(
+          children: [
+            Text(difficultyEmoji, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 8),
+            Text(difficultyLabel,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: color)),
+            const SizedBox(width: 8),
+            Text('$doneCount/${experiences.length}',
+                style: TextStyle(
+                    fontSize: 13, color: Colors.grey.shade500)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // 도장 그리드
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 0.85,
+          ),
+          itemCount: experiences.length,
+          itemBuilder: (_, i) {
+            final exp = experiences[i];
+            final isDone = completed.contains(exp.id);
+            return _StampCard(
+              experience: exp,
+              isDone: isDone,
+              stampColor: color,
+              stampBg: bgColor,
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _StampCard extends StatelessWidget {
+  final Experience experience;
+  final bool isDone;
+  final Color stampColor;
+  final Color stampBg;
+
+  const _StampCard({
+    required this.experience,
+    required this.isDone,
+    required this.stampColor,
+    required this.stampBg,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: isDone ? 1.0 : 0.38,
+      duration: const Duration(milliseconds: 300),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDone ? stampBg : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDone ? stampColor.withValues(alpha: 0.6) : Colors.grey.shade300,
+            width: isDone ? 2 : 1,
+          ),
+        ),
+        child: Stack(
+          children: [
+            // 도장 찍힌 이모지 워터마크
+            if (isDone)
+              Positioned(
+                top: 6,
+                right: 8,
+                child: Text(
+                  experience.difficulty.emoji,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: stampColor.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            // 메인 콘텐츠
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 완료 시 체크, 미완료 시 잠금
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDone
+                          ? stampColor.withValues(alpha: 0.15)
+                          : Colors.grey.shade200,
+                    ),
+                    child: Center(
+                      child: isDone
+                          ? Icon(Icons.check_rounded,
+                              size: 20, color: stampColor)
+                          : Icon(Icons.lock_outline_rounded,
+                              size: 18, color: Colors.grey.shade400),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    experience.title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isDone
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: isDone
+                          ? Colors.black87
+                          : Colors.grey.shade500,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════ 내 설정 탭 ══════════════════════════════════════
+
+class _SettingsTab extends StatelessWidget {
+  final VoidCallback onReset;
+  const _SettingsTab({required this.onReset});
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = AuthService.currentUserId ?? '';
+    final profile = AuthService.getProfile(userId);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 80),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('내 프로필',
+              style:
+                  TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+
+          if (profile == null)
+            const _EmptyProfileCard()
+          else
+            _ProfileCard(profile: profile),
+
+          const SizedBox(height: 32),
+
+          // ── 온보딩 재설정 ──────────────────────────────────────────
+          const Text('설정',
+              style:
+                  TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          _SettingItem(
+            icon: Icons.refresh_rounded,
+            label: '온보딩 다시 설정하기',
+            subtitle: '나이, MBTI, 직업, 취미를 다시 입력할 수 있어요',
+            onTap: () => _confirmReset(context, userId),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmReset(BuildContext context, String userId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('온보딩 재설정',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: const Text(
+          '나이, MBTI, 직업, 취미를 다시 입력하게 돼요.\n경험 기록과 포인트는 그대로 유지돼요.',
+          style: TextStyle(fontSize: 14, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소',
+                style: TextStyle(color: Colors.grey)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF7F77DD),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('재설정하기'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    await AuthService.resetOnboarding(userId);
+
+    if (!context.mounted) return;
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) =>
+            OnboardingProfileScreen(userId: userId),
+        transitionsBuilder: (_, anim, _, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
+  }
+}
+
+class _ProfileCard extends StatelessWidget {
+  final UserProfile profile;
+  const _ProfileCard({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _ProfileRow(
+            label: 'MBTI',
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEEDFE),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(profile.mbti,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF534AB7))),
+            ),
+          ),
+          const Divider(height: 24),
+          _ProfileRow(
+            label: '나이',
+            child: Text('${profile.age}세',
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w500)),
+          ),
+          const Divider(height: 24),
+          _ProfileRow(
+            label: '직업',
+            child: Text(profile.job,
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w500)),
+          ),
+          const Divider(height: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('취미',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: profile.hobbies
+                    .map((h) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEEEDFE),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(h,
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF534AB7))),
+                        ))
+                    .toList(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileRow extends StatelessWidget {
+  final String label;
+  final Widget child;
+  const _ProfileRow({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 48,
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w500)),
+        ),
+        const SizedBox(width: 12),
+        child,
+      ],
+    );
+  }
+}
+
+class _EmptyProfileCard extends StatelessWidget {
+  const _EmptyProfileCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Center(
+        child: Text('프로필 정보가 없어요. 아래에서 온보딩을 설정해보세요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 13, color: Colors.grey.shade400, height: 1.6)),
+      ),
+    );
+  }
+}
+
+class _SettingItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _SettingItem({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade100),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEEDFE),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon,
+                  size: 20, color: const Color(0xFF7F77DD)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12, color: Colors.grey.shade500)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded,
+                color: Colors.grey.shade400),
+          ],
+        ),
       ),
     );
   }

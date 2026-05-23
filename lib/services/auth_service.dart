@@ -145,6 +145,12 @@ class AuthService {
   static bool hasCompletedOnboarding(String userId) =>
       _onboardingDone.contains(userId);
 
+  /// 온보딩 재설정 — 계정·경험 기록은 유지하고 프로필 입력만 초기화
+  static Future<void> resetOnboarding(String userId) async {
+    _onboardingDone.remove(userId);
+    await _saveOnboarding();
+  }
+
   /// 저장된 키워드 가져오기 (현재는 빈 리스트 반환 — 필요 시 확장)
   static List<String> getUserKeywords(String userId) => [];
 

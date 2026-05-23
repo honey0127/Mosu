@@ -110,13 +110,14 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     await AuthService.completeOnboarding(widget.userId, []);
 
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
+    Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
         pageBuilder: (_, _, _) => const MainShell(),
         transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
+      (route) => false,
     );
   }
 
