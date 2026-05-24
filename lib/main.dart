@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
+import 'features/shell/splash_screen.dart';
+import 'services/auth_service.dart';
 
-void main() => runApp(const DriftApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthService.init();
+  runApp(const DriftApp());
+}
 
 class DriftApp extends StatelessWidget {
   const DriftApp({super.key});

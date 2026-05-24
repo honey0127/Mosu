@@ -1,24 +1,94 @@
-/// 간단한 인메모리 인증 서비스 (실제 앱에서는 Firebase/백엔드로 교체)
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AuthService {
-  // 사용자 DB: { userId: { password, nickname } }
-  static final Map<String, Map<String, String>> _users = {
-    // 기본 테스트 계정
-    'test': {'password': '123456', 'nickname': '탐험가'},
-  };
+  static const _kUsers     = 'auth_users';
+  static const _kProfiles  = 'auth_profiles';
+  static const _kOnboarding = 'auth_onboarding_done';
+  static const _kJoinDates = 'auth_join_dates';
 
-  // 온보딩 완료 여부
-  static final Map<String, bool> _onboardingDone = {};
-
-  // 온보딩 키워드 저장
-  static final Map<String, List<String>> _userKeywords = {};
-
-  // 프로필 정보 저장 (나이, MBTI, 직업, 취미)
+  static final Map<String, Map<String, String>> _users = {};
   static final Map<String, UserProfile> _userProfiles = {};
+  static final Set<String> _onboardingDone = {};
+  static final Map<String, DateTime> _joinDates = {};
 
-  // 현재 로그인된 사용자
   static String? _currentUserId;
-
   static String? get currentUserId => _currentUserId;
+
+  /// 앱 시작 시 한 번 호출 — SharedPreferences에서 데이터 로드
+  static Future<void> init() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // 사용자 계정
+    final usersJson = prefs.getString(_kUsers);
+    if (usersJson != null) {
+      final Map<String, dynamic> raw = jsonDecode(usersJson);
+      raw.forEach((id, val) {
+        _users[id] = Map<String, String>.from(val as Map);
+      });
+    }
+
+    // 프로필
+    final profilesJson = prefs.getString(_kProfiles);
+    if (profilesJson != null) {
+      final Map<String, dynamic> raw = jsonDecode(profilesJson);
+      raw.forEach((id, val) {
+        final m = val as Map<String, dynamic>;
+        _userProfiles[id] = UserProfile(
+          age:     m['age'] as int,
+          mbti:    m['mbti'] as String,
+          job:     m['job'] as String,
+          hobbies: List<String>.from(m['hobbies'] as List),
+        );
+      });
+    }
+
+    // 온보딩 완료 목록
+    final onboardingJson = prefs.getString(_kOnboarding);
+    if (onboardingJson != null) {
+      _onboardingDone.addAll(List<String>.from(jsonDecode(onboardingJson)));
+    }
+
+    // 가입일
+    final joinJson = prefs.getString(_kJoinDates);
+    if (joinJson != null) {
+      final Map<String, dynamic> raw = jsonDecode(joinJson);
+      raw.forEach((id, val) {
+        _joinDates[id] = DateTime.parse(val as String);
+      });
+    }
+  }
+
+  // ── 저장 헬퍼 ─────────────────────────────────────────────────────────────
+
+  static Future<void> _saveUsers() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kUsers, jsonEncode(_users));
+  }
+
+  static Future<void> _saveProfiles() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = _userProfiles.map((id, p) => MapEntry(id, {
+      'age': p.age,
+      'mbti': p.mbti,
+      'job': p.job,
+      'hobbies': p.hobbies,
+    }));
+    await prefs.setString(_kProfiles, jsonEncode(encoded));
+  }
+
+  static Future<void> _saveOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kOnboarding, jsonEncode(_onboardingDone.toList()));
+  }
+
+  static Future<void> _saveJoinDates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = _joinDates.map((id, d) => MapEntry(id, d.toIso8601String()));
+    await prefs.setString(_kJoinDates, jsonEncode(encoded));
+  }
+
+  // ── 공개 API ──────────────────────────────────────────────────────────────
 
   /// 로그인. 성공 시 유저 정보 Map 반환, 실패 시 null
   static Map<String, String>? login(String id, String password) {
@@ -30,30 +100,32 @@ class AuthService {
   }
 
   /// 회원가입. 성공 시 true, 이미 있는 아이디면 false
-  static bool register({
+  static Future<bool> register({
     required String id,
     required String password,
     required String nickname,
-  }) {
+  }) async {
     if (_users.containsKey(id)) return false;
     _users[id] = {'password': password, 'nickname': nickname};
+    await _saveUsers();
     return true;
   }
 
   /// 프로필 저장 (나이, MBTI, 직업, 취미)
-  static void saveProfile({
+  static Future<void> saveProfile({
     required String userId,
     required int age,
     required String mbti,
     required String job,
     required List<String> hobbies,
-  }) {
+  }) async {
     _userProfiles[userId] = UserProfile(
       age: age,
       mbti: mbti,
       job: job,
       hobbies: hobbies,
     );
+    await _saveProfiles();
   }
 
   /// 프로필 가져오기
@@ -63,19 +135,37 @@ class AuthService {
   static bool hasProfile(String userId) => _userProfiles.containsKey(userId);
 
   /// 온보딩 완료 처리
-  static void completeOnboarding(String userId, List<String> keywords) {
-    _onboardingDone[userId] = true;
-    _userKeywords[userId] = keywords;
+  static Future<void> completeOnboarding(String userId, List<String> keywords) async {
+    _onboardingDone.add(userId);
+    _joinDates.putIfAbsent(userId, () => DateTime.now());
+    await Future.wait([_saveOnboarding(), _saveJoinDates()]);
   }
 
   /// 온보딩 완료 여부 확인
-  static bool hasCompletedOnboarding(String userId) {
-    return _onboardingDone[userId] ?? false;
+  static bool hasCompletedOnboarding(String userId) =>
+      _onboardingDone.contains(userId);
+
+  /// 온보딩 재설정 — 계정·경험 기록은 유지하고 프로필 입력만 초기화
+  static Future<void> resetOnboarding(String userId) async {
+    _onboardingDone.remove(userId);
+    await _saveOnboarding();
   }
 
-  /// 저장된 키워드 가져오기
-  static List<String> getUserKeywords(String userId) {
-    return _userKeywords[userId] ?? [];
+  /// 저장된 키워드 가져오기 (현재는 빈 리스트 반환 — 필요 시 확장)
+  static List<String> getUserKeywords(String userId) => [];
+
+  /// 가입일 기준 현재 몇 주차인지 반환 (1주차부터 시작)
+  static int getWeekNumber(String userId) {
+    final joinDate = _joinDates[userId];
+    if (joinDate == null) return 1;
+    final diff = DateTime.now().difference(joinDate).inDays;
+    return (diff / 7).floor() + 1;
+  }
+
+  /// 가입일 직접 설정 (테스트용)
+  static void setJoinDate(String userId, DateTime date) {
+    _joinDates[userId] = date;
+    _saveJoinDates();
   }
 
   /// 로그아웃
@@ -102,6 +192,9 @@ class UserProfile {
     required this.job,
     required this.hobbies,
   });
+
+  bool get isIntrovert => mbti.startsWith('I');
+  bool get isIntuitive => mbti.length > 1 && mbti[1] == 'N';
 
   @override
   String toString() =>

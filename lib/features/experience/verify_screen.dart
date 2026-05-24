@@ -1,5 +1,9 @@
-﻿import 'package:flutter/material.dart';
-import '../models/models.dart';
+﻿import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../models/experience.dart';
+import '../../models/app_state.dart';
+import '../shell/main_shell.dart';
 
 class VerifyScreen extends StatefulWidget {
   final Experience exp;
@@ -13,6 +17,10 @@ class _VerifyScreenState extends State<VerifyScreen> {
   final Set<String> _emotions = {};
   final _reviewCtrl = TextEditingController();
   bool _completed = false;
+
+  // ── 사진 관련 ──────────────────────────────────────────────
+  XFile? _photo;
+  final _picker = ImagePicker();
 
   static const _emotionOptions = [
     '예상 밖이었어',
@@ -31,9 +39,145 @@ class _VerifyScreenState extends State<VerifyScreen> {
     super.dispose();
   }
 
+  // ── 사진 선택 바텀시트 ──────────────────────────────────────
+  Future<void> _showPhotoOptions() async {
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 핸들
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '인증 사진 추가',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEEDFE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.camera_alt_outlined,
+                      color: Color(0xFF7F77DD), size: 22),
+                ),
+                title: const Text('카메라로 찍기',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text('지금 바로 사진을 촬영해요',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEEDFE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.photo_library_outlined,
+                      color: Color(0xFF7F77DD), size: 22),
+                ),
+                title: const Text('갤러리에서 선택',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text('내 기기의 사진을 불러와요',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              // 이미 사진이 있으면 삭제 옵션 추가
+              if (_photo != null) ...[
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.delete_outline,
+                        color: Colors.red.shade400, size: 22),
+                  ),
+                  title: Text('사진 삭제',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: Colors.red.shade400)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _photo = null);
+                  },
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,     // 용량 최적화
+        maxWidth: 1920,
+      );
+      if (picked != null) {
+        setState(() => _photo = picked);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(source == ImageSource.camera
+              ? '카메라 권한을 허용해 주세요'
+              : '사진 접근 권한을 허용해 주세요'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+    }
+  }
+
+  // ── 완료 처리 ───────────────────────────────────────────────
   void _complete() {
     if (_completed) return;
-    // 포인트 적립 & 완료 기록
     AppState.i.addPoints(widget.exp.difficulty.points);
     AppState.i.completedIds.add(widget.exp.id);
     setState(() => _completed = true);
@@ -43,13 +187,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
       barrierDismissible: false,
       builder: (_) => _RewardDialog(
         exp: widget.exp,
-        onClose: () {
-          // dialog → verify → recommendation → keyword 순으로 pop
-          Navigator.of(context)
-            ..pop()
-            ..pop()
-            ..pop()
-            ..pop();
+        onClose: () {                                      // ← 이 부분 수정
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => const MainShell(initialIndex: 3),
+            ),
+                (route) => false,
+          );
         },
       ),
     );
@@ -88,8 +232,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         children: [
                           Text(exp.title,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15)),
+                                  fontWeight: FontWeight.w700, fontSize: 15)),
                           const SizedBox(height: 3),
                           Text(
                             '+${exp.difficulty.points}P 획득 예정',
@@ -101,7 +244,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         ],
                       ),
                     ),
-                    // 난이도 뱃지
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
@@ -126,40 +268,92 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   style: TextStyle(
                       fontSize: 15, fontWeight: FontWeight.w600)),
               const SizedBox(height: 10),
+
               GestureDetector(
-                onTap: () {
-                  // 실제 구현 시 image_picker 패키지 사용
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('카메라 연동은 image_picker 패키지로 구현해요'),
-                      behavior: SnackBarBehavior.floating,
+                onTap: _showPhotoOptions,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: _photo == null
+                  // ── 사진 없음: 플레이스홀더 ──
+                      ? Container(
+                    key: const ValueKey('placeholder'),
+                    width: double.infinity,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                      border:
+                      Border.all(color: Colors.grey.shade200),
                     ),
-                  );
-                },
-                child: Container(
-                  width: double.infinity,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo_outlined,
+                            size: 36,
+                            color: Colors.grey.shade400),
+                        const SizedBox(height: 10),
+                        Text('사진 추가하기',
+                            style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Text('카메라 촬영 또는 갤러리에서 선택',
+                            style: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 12)),
+                        const SizedBox(height: 2),
+                        Text('위치 · 시간이 자동으로 기록돼요',
+                            style: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 11)),
+                      ],
+                    ),
+                  )
+                  // ── 사진 있음: 미리보기 ──
+                      : Stack(
+                    key: const ValueKey('preview'),
                     children: [
-                      Icon(Icons.add_a_photo_outlined,
-                          size: 32, color: Colors.grey.shade400),
-                      const SizedBox(height: 8),
-                      Text('사진 추가하기',
-                          style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 4),
-                      Text('위치 · 시간이 자동으로 기록돼요',
-                          style: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 11)),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.file(
+                          File(_photo!.path),
+                          width: double.infinity,
+                          height: 260,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      // 변경/삭제 오버레이 버튼
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: GestureDetector(
+                          onTap: _showPhotoOptions,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius:
+                              BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.edit,
+                                    color: Colors.white, size: 14),
+                                SizedBox(width: 4),
+                                Text('변경',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight:
+                                        FontWeight.w600)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -202,9 +396,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
                       child: Text(e,
                           style: TextStyle(
                               fontSize: 13,
-                              color: sel
-                                  ? Colors.white
-                                  : Colors.black87,
+                              color:
+                              sel ? Colors.white : Colors.black87,
                               fontWeight: sel
                                   ? FontWeight.w600
                                   : FontWeight.w400)),
@@ -230,13 +423,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
                       fontSize: 13, color: Colors.grey.shade400),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                    BorderSide(color: Colors.grey.shade200),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                    BorderSide(color: Colors.grey.shade200),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade50,
@@ -314,8 +505,7 @@ class _RewardDialog extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('⭐',
-                      style: TextStyle(fontSize: 26)),
+                  const Text('⭐', style: TextStyle(fontSize: 26)),
                   const SizedBox(width: 10),
                   Text('+${exp.difficulty.points}P 획득!',
                       style: const TextStyle(
@@ -340,7 +530,7 @@ class _RewardDialog extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: onClose,
-                child: const Text('마이 페이지에서 꾸미기 →',
+                child: const Text('도장 확인하러 가기! →',
                     style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),

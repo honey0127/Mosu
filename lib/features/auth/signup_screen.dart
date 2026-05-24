@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -45,7 +45,7 @@ class _SignupScreenState extends State<SignupScreen> {
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
-    final ok = AuthService.register(id: id, password: pw, nickname: nickname);
+    final ok = await AuthService.register(id: id, password: pw, nickname: nickname);
     setState(() => _loading = false);
 
     if (!ok) {
@@ -53,6 +53,7 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('회원가입 완료! 로그인해주세요 🎉'),

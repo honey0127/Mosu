@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../../services/auth_service.dart';
 import 'signup_screen.dart';
-import 'onboarding_profile_screen.dart';
-import '../screens/main_shell.dart';
+import '../onboarding/onboarding_profile_screen.dart';
+import '../shell/main_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
