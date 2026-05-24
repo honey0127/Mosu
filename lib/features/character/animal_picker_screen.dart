@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/animal.dart';
-import '../../models/app_state.dart';
+import '../../models/models.dart';
 
 /// 캐릭터 베이스 동물 선택 화면.
 /// 처음 '내 공간' 진입 시 자동 호출되며, 이후 아바타 옆 '동물 바꾸기' 버튼으로도 진입 가능.
