@@ -170,7 +170,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 46,
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
+                      await AuthService.loginAsGuest();
+                      if (!context.mounted) return;
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                             builder: (_) => const MainShell()),

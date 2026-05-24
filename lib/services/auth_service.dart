@@ -2,15 +2,21 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const _kUsers     = 'auth_users';
-  static const _kProfiles  = 'auth_profiles';
+  static const _kUsers = 'auth_users';
+  static const _kProfiles = 'auth_profiles';
   static const _kOnboarding = 'auth_onboarding_done';
   static const _kJoinDates = 'auth_join_dates';
+  static const _kAvatars = 'auth_avatars';
+
+  /// 프로필 사진을 캐릭터(내 공간에서 만든 동물 얼굴)로 설정했을 때의 값.
+  /// 이 값이 아니면서 null도 아니면 갤러리 사진 파일 경로로 해석한다.
+  static const avatarAnimal = 'animal';
 
   static final Map<String, Map<String, String>> _users = {};
   static final Map<String, UserProfile> _userProfiles = {};
   static final Set<String> _onboardingDone = {};
   static final Map<String, DateTime> _joinDates = {};
+  static final Map<String, String> _avatars = {};
 
   static String? _currentUserId;
   static String? get currentUserId => _currentUserId;
@@ -35,9 +41,9 @@ class AuthService {
       raw.forEach((id, val) {
         final m = val as Map<String, dynamic>;
         _userProfiles[id] = UserProfile(
-          age:     m['age'] as int,
-          mbti:    m['mbti'] as String,
-          job:     m['job'] as String,
+          age: m['age'] as int,
+          mbti: m['mbti'] as String,
+          job: m['job'] as String,
           hobbies: List<String>.from(m['hobbies'] as List),
         );
       });
@@ -57,6 +63,15 @@ class AuthService {
         _joinDates[id] = DateTime.parse(val as String);
       });
     }
+
+    // 프로필 사진
+    final avatarsJson = prefs.getString(_kAvatars);
+    if (avatarsJson != null) {
+      final Map<String, dynamic> raw = jsonDecode(avatarsJson);
+      raw.forEach((id, val) {
+        _avatars[id] = val as String;
+      });
+    }
   }
 
   // ── 저장 헬퍼 ─────────────────────────────────────────────────────────────
@@ -68,12 +83,14 @@ class AuthService {
 
   static Future<void> _saveProfiles() async {
     final prefs = await SharedPreferences.getInstance();
-    final encoded = _userProfiles.map((id, p) => MapEntry(id, {
-      'age': p.age,
-      'mbti': p.mbti,
-      'job': p.job,
-      'hobbies': p.hobbies,
-    }));
+    final encoded = _userProfiles.map(
+      (id, p) => MapEntry(id, {
+        'age': p.age,
+        'mbti': p.mbti,
+        'job': p.job,
+        'hobbies': p.hobbies,
+      }),
+    );
     await prefs.setString(_kProfiles, jsonEncode(encoded));
   }
 
@@ -84,8 +101,15 @@ class AuthService {
 
   static Future<void> _saveJoinDates() async {
     final prefs = await SharedPreferences.getInstance();
-    final encoded = _joinDates.map((id, d) => MapEntry(id, d.toIso8601String()));
+    final encoded = _joinDates.map(
+      (id, d) => MapEntry(id, d.toIso8601String()),
+    );
     await prefs.setString(_kJoinDates, jsonEncode(encoded));
+  }
+
+  static Future<void> _saveAvatars() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kAvatars, jsonEncode(_avatars));
   }
 
   // ── 공개 API ──────────────────────────────────────────────────────────────
@@ -97,6 +121,18 @@ class AuthService {
     if (user['password'] != password) return null;
     _currentUserId = id;
     return user;
+  }
+
+  /// 게스트(디버그 '로그인 건너뛰기')용 입장. 현재 사용자 ID를 보장해
+  /// 닉네임/프로필 사진 등이 빈칸 없이 정상 동작하게 한다.
+  static const guestId = 'guest';
+
+  static Future<void> loginAsGuest() async {
+    if (!_users.containsKey(guestId)) {
+      _users[guestId] = {'password': '', 'nickname': '게스트'};
+      await _saveUsers();
+    }
+    _currentUserId = guestId;
   }
 
   /// 회원가입. 성공 시 true, 이미 있는 아이디면 false
@@ -135,7 +171,10 @@ class AuthService {
   static bool hasProfile(String userId) => _userProfiles.containsKey(userId);
 
   /// 온보딩 완료 처리
-  static Future<void> completeOnboarding(String userId, List<String> keywords) async {
+  static Future<void> completeOnboarding(
+    String userId,
+    List<String> keywords,
+  ) async {
     _onboardingDone.add(userId);
     _joinDates.putIfAbsent(userId, () => DateTime.now());
     await Future.wait([_saveOnboarding(), _saveJoinDates()]);
@@ -173,9 +212,36 @@ class AuthService {
     _currentUserId = null;
   }
 
-  /// 닉네임 가져오기
+  /// 닉네임 가져오기. 비어 있으면 친근한 기본값으로 대체해 화면에 빈칸이 보이지 않게 한다.
   static String getNickname(String userId) {
-    return _users[userId]?['nickname'] ?? userId;
+    final name = _users[userId]?['nickname']?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return userId.isNotEmpty ? userId : '게스트';
+  }
+
+  /// 닉네임 변경 (로컬 계정). 빈 문자열이면 무시.
+  static Future<void> setNickname(String userId, String nickname) async {
+    final name = nickname.trim();
+    if (name.isEmpty) return;
+    final user = _users[userId];
+    if (user == null) return;
+    user['nickname'] = name;
+    await _saveUsers();
+  }
+
+  /// 프로필 사진 값 가져오기.
+  /// null = 기본(이모지), [avatarAnimal] = 캐릭터 얼굴,
+  /// 그 외 = 갤러리 사진 URL(업로드 실패 시 로컬 파일 경로)
+  static String? getAvatar(String userId) => _avatars[userId];
+
+  /// 프로필 사진 설정. value 가 null 이면 기본으로 되돌린다.
+  static Future<void> setAvatar(String userId, String? value) async {
+    if (value == null) {
+      _avatars.remove(userId);
+    } else {
+      _avatars[userId] = value;
+    }
+    await _saveAvatars();
   }
 }
 

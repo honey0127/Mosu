@@ -65,10 +65,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
     );
     if (code == null || code.trim().isEmpty) return;
     try {
-      final join = await _repo.redeemInviteCode(code.trim());
-      _snack('“${join.roomName}” 방에 입장했어요!');
-      await _refresh();
-      _openRoom(join.roomId, join.roomName);
+      final res = await _repo.requestJoin(code.trim());
+      _snack('‘${res.roomName}’에 가입 요청을 보냈어요. 방장이 승인하면 입장돼요.');
     } on CommunityException catch (e) {
       _snack(e.message);
     }
