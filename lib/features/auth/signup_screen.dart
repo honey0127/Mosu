@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../onboarding/keyword_selection_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -53,14 +54,18 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    // 자동 로그인 후 키워드 선택 화면으로 이동
+    AuthService.login(id, pw);
+
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('회원가입 완료! 로그인해주세요 🎉'),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => KeywordSelectionScreen(userId: id),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
       ),
     );
-    Navigator.pop(context);
   }
 
   @override

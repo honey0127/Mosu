@@ -2,21 +2,27 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const _kUsers = 'auth_users';
-  static const _kProfiles = 'auth_profiles';
-  static const _kOnboarding = 'auth_onboarding_done';
-  static const _kJoinDates = 'auth_join_dates';
-  static const _kAvatars = 'auth_avatars';
+  // 두 브랜치의 키(Key) 값들을 모두 유지합니다.
+  static const _kUsers        = 'auth_users';
+  static const _kProfiles     = 'auth_profiles';
+  static const _kOnboarding   = 'auth_onboarding_done';
+  static const _kJoinDates    = 'auth_join_dates';
+  static const _kAvatars      = 'auth_avatars';            // HEAD(내 브랜치) 추가분
+  static const _kKeywordsDone = 'auth_keywords_done';      // Claude 브랜치 추가분
+  static const _kUserKeywords = 'auth_user_keywords';      // Claude 브랜치 추가분
 
   /// 프로필 사진을 캐릭터(내 공간에서 만든 동물 얼굴)로 설정했을 때의 값.
   /// 이 값이 아니면서 null도 아니면 갤러리 사진 파일 경로로 해석한다.
   static const avatarAnimal = 'animal';
 
+  // 메모리 데이터 구조도 모두 합쳐줍니다.
   static final Map<String, Map<String, String>> _users = {};
   static final Map<String, UserProfile> _userProfiles = {};
   static final Set<String> _onboardingDone = {};
   static final Map<String, DateTime> _joinDates = {};
-  static final Map<String, String> _avatars = {};
+  static final Map<String, String> _avatars = {};          // HEAD(내 브랜치) 추가분
+  static final Set<String> _keywordsDone = {};             // Claude 브랜치 추가분
+  static final Map<String, List<String>> _userKeywords = {}; // Claude 브랜치 추가분
 
   static String? _currentUserId;
   static String? get currentUserId => _currentUserId;
@@ -64,12 +70,27 @@ class AuthService {
       });
     }
 
-    // 프로필 사진
+    // 프로필 사진 로드 (HEAD)
     final avatarsJson = prefs.getString(_kAvatars);
     if (avatarsJson != null) {
       final Map<String, dynamic> raw = jsonDecode(avatarsJson);
       raw.forEach((id, val) {
         _avatars[id] = val as String;
+      });
+    }
+
+    // 키워드 선택 완료 목록 로드 (Claude)
+    final kwDoneJson = prefs.getString(_kKeywordsDone);
+    if (kwDoneJson != null) {
+      _keywordsDone.addAll(List<String>.from(jsonDecode(kwDoneJson)));
+    }
+
+    // 유저별 선택 키워드 로드 (Claude)
+    final kwJson = prefs.getString(_kUserKeywords);
+    if (kwJson != null) {
+      final Map<String, dynamic> raw = jsonDecode(kwJson);
+      raw.forEach((id, val) {
+        _userKeywords[id] = List<String>.from(val as List);
       });
     }
   }
@@ -84,7 +105,7 @@ class AuthService {
   static Future<void> _saveProfiles() async {
     final prefs = await SharedPreferences.getInstance();
     final encoded = _userProfiles.map(
-      (id, p) => MapEntry(id, {
+          (id, p) => MapEntry(id, {
         'age': p.age,
         'mbti': p.mbti,
         'job': p.job,
@@ -102,14 +123,27 @@ class AuthService {
   static Future<void> _saveJoinDates() async {
     final prefs = await SharedPreferences.getInstance();
     final encoded = _joinDates.map(
-      (id, d) => MapEntry(id, d.toIso8601String()),
+          (id, d) => MapEntry(id, d.toIso8601String()),
     );
     await prefs.setString(_kJoinDates, jsonEncode(encoded));
   }
 
+  // 아바타 저장 헬퍼 (HEAD)
   static Future<void> _saveAvatars() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kAvatars, jsonEncode(_avatars));
+  }
+
+  // 키워드 완료 저장 헬퍼 (Claude)
+  static Future<void> _saveKeywordsDone() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kKeywordsDone, jsonEncode(_keywordsDone.toList()));
+  }
+
+  // 유저 키워드 저장 헬퍼 (Claude)
+  static Future<void> _saveUserKeywords() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kUserKeywords, jsonEncode(_userKeywords));
   }
 
   // ── 공개 API ──────────────────────────────────────────────────────────────
@@ -172,9 +206,9 @@ class AuthService {
 
   /// 온보딩 완료 처리
   static Future<void> completeOnboarding(
-    String userId,
-    List<String> keywords,
-  ) async {
+      String userId,
+      List<String> keywords,
+      ) async {
     _onboardingDone.add(userId);
     _joinDates.putIfAbsent(userId, () => DateTime.now());
     await Future.wait([_saveOnboarding(), _saveJoinDates()]);
@@ -190,8 +224,20 @@ class AuthService {
     await _saveOnboarding();
   }
 
-  /// 저장된 키워드 가져오기 (현재는 빈 리스트 반환 — 필요 시 확장)
-  static List<String> getUserKeywords(String userId) => [];
+  /// 키워드 선택 저장 (Claude)
+  static Future<void> saveKeywords(String userId, List<String> keywords) async {
+    _userKeywords[userId] = keywords;
+    _keywordsDone.add(userId);
+    await Future.wait([_saveUserKeywords(), _saveKeywordsDone()]);
+  }
+
+  /// 키워드 선택 완료 여부 (Claude)
+  static bool hasSelectedKeywords(String userId) =>
+      _keywordsDone.contains(userId);
+
+  /// 저장된 키워드 가져오기 (Claude)
+  static List<String> getUserKeywords(String userId) =>
+      _userKeywords[userId] ?? [];
 
   /// 가입일 기준 현재 몇 주차인지 반환 (1주차부터 시작)
   static int getWeekNumber(String userId) {
@@ -229,12 +275,12 @@ class AuthService {
     await _saveUsers();
   }
 
-  /// 프로필 사진 값 가져오기.
+  /// 프로필 사진 값 가져오기. (HEAD)
   /// null = 기본(이모지), [avatarAnimal] = 캐릭터 얼굴,
   /// 그 외 = 갤러리 사진 URL(업로드 실패 시 로컬 파일 경로)
   static String? getAvatar(String userId) => _avatars[userId];
 
-  /// 프로필 사진 설정. value 가 null 이면 기본으로 되돌린다.
+  /// 프로필 사진 설정. value 가 null 이면 기본으로 되돌린다. (HEAD)
   static Future<void> setAvatar(String userId, String? value) async {
     if (value == null) {
       _avatars.remove(userId);
