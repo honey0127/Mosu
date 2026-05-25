@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'features/shell/splash_screen.dart';
 import 'services/auth_service.dart';
+import 'services/community_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AuthService.init();
+  await CommunityService.init();
   runApp(const DriftApp());
 }
 
