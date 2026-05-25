@@ -2,15 +2,19 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  static const _kUsers     = 'auth_users';
-  static const _kProfiles  = 'auth_profiles';
-  static const _kOnboarding = 'auth_onboarding_done';
-  static const _kJoinDates = 'auth_join_dates';
+  static const _kUsers        = 'auth_users';
+  static const _kProfiles     = 'auth_profiles';
+  static const _kOnboarding   = 'auth_onboarding_done';
+  static const _kJoinDates    = 'auth_join_dates';
+  static const _kKeywordsDone = 'auth_keywords_done';
+  static const _kUserKeywords = 'auth_user_keywords';
 
   static final Map<String, Map<String, String>> _users = {};
   static final Map<String, UserProfile> _userProfiles = {};
   static final Set<String> _onboardingDone = {};
   static final Map<String, DateTime> _joinDates = {};
+  static final Set<String> _keywordsDone = {};
+  static final Map<String, List<String>> _userKeywords = {};
 
   static String? _currentUserId;
   static String? get currentUserId => _currentUserId;
@@ -57,6 +61,21 @@ class AuthService {
         _joinDates[id] = DateTime.parse(val as String);
       });
     }
+
+    // 키워드 선택 완료 목록
+    final kwDoneJson = prefs.getString(_kKeywordsDone);
+    if (kwDoneJson != null) {
+      _keywordsDone.addAll(List<String>.from(jsonDecode(kwDoneJson)));
+    }
+
+    // 유저별 선택 키워드
+    final kwJson = prefs.getString(_kUserKeywords);
+    if (kwJson != null) {
+      final Map<String, dynamic> raw = jsonDecode(kwJson);
+      raw.forEach((id, val) {
+        _userKeywords[id] = List<String>.from(val as List);
+      });
+    }
   }
 
   // ── 저장 헬퍼 ─────────────────────────────────────────────────────────────
@@ -86,6 +105,16 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final encoded = _joinDates.map((id, d) => MapEntry(id, d.toIso8601String()));
     await prefs.setString(_kJoinDates, jsonEncode(encoded));
+  }
+
+  static Future<void> _saveKeywordsDone() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kKeywordsDone, jsonEncode(_keywordsDone.toList()));
+  }
+
+  static Future<void> _saveUserKeywords() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kUserKeywords, jsonEncode(_userKeywords));
   }
 
   // ── 공개 API ──────────────────────────────────────────────────────────────
@@ -151,8 +180,20 @@ class AuthService {
     await _saveOnboarding();
   }
 
-  /// 저장된 키워드 가져오기 (현재는 빈 리스트 반환 — 필요 시 확장)
-  static List<String> getUserKeywords(String userId) => [];
+  /// 키워드 선택 저장
+  static Future<void> saveKeywords(String userId, List<String> keywords) async {
+    _userKeywords[userId] = keywords;
+    _keywordsDone.add(userId);
+    await Future.wait([_saveUserKeywords(), _saveKeywordsDone()]);
+  }
+
+  /// 키워드 선택 완료 여부
+  static bool hasSelectedKeywords(String userId) =>
+      _keywordsDone.contains(userId);
+
+  /// 저장된 키워드 가져오기
+  static List<String> getUserKeywords(String userId) =>
+      _userKeywords[userId] ?? [];
 
   /// 가입일 기준 현재 몇 주차인지 반환 (1주차부터 시작)
   static int getWeekNumber(String userId) {

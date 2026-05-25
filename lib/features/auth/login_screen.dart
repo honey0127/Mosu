@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'signup_screen.dart';
+import '../onboarding/keyword_selection_screen.dart';
 import '../onboarding/onboarding_profile_screen.dart';
 import '../shell/main_shell.dart';
 
@@ -40,15 +41,17 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // 키워드 온보딩 완료 여부 확인
-    final needsOnboarding = !AuthService.hasCompletedOnboarding(id);
+    final Widget next;
+    if (!AuthService.hasSelectedKeywords(id)) {
+      next = KeywordSelectionScreen(userId: id);
+    } else if (!AuthService.hasCompletedOnboarding(id)) {
+      next = OnboardingProfileScreen(userId: id);
+    } else {
+      next = const MainShell();
+    }
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => needsOnboarding
-            ? OnboardingProfileScreen(userId: id)
-            : const MainShell(),
-      ),
+      MaterialPageRoute(builder: (_) => next),
     );
   }
 
