@@ -66,7 +66,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     if (code == null || code.trim().isEmpty) return;
     try {
       final res = await _repo.requestJoin(code.trim());
-      _snack('‘${res.roomName}’에 가입 요청을 보냈어요. 방장이 승인하면 입장돼요.');
+      _snack("'${res.roomName}’에 가입 요청을 보냈어요. 방장이 승인하면 입장돼요.");
     } on CommunityException catch (e) {
       _snack(e.message);
     }
@@ -159,7 +159,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     return ListView.separated(
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                       itemCount: rooms.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
                       itemBuilder: (_, i) => _RoomCard(
                         room: rooms[i],
                         onTap: () => _openRoom(rooms[i].id, rooms[i].name),

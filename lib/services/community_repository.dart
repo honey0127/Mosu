@@ -133,13 +133,13 @@ class CommunityRepository {
 
   /// 내 친구 목록.
   Future<List<Friend>> listFriends() async {
-    final rows = await _db.rpc('list_friends') as List;
+    final rows = await _rpc('list_friends', {}) as List;
     return rows.map((r) => Friend.fromMap(r as Map<String, dynamic>)).toList();
   }
 
   /// 나에게 들어온 친구 요청 목록.
   Future<List<FriendRequest>> listIncomingRequests() async {
-    final rows = await _db.rpc('list_incoming_requests') as List;
+    final rows = await _rpc('list_incoming_requests', {}) as List;
     return rows
         .map((r) => FriendRequest.fromMap(r as Map<String, dynamic>))
         .toList();
@@ -154,15 +154,12 @@ class CommunityRepository {
     DateTime? deadline,
     int maxMembers = 50,
   }) async {
-    final id = await _db.rpc(
-      'create_room',
-      params: {
-        'p_name': name,
-        'p_goal': goal,
-        'p_deadline': deadline?.toUtc().toIso8601String(),
-        'p_max': maxMembers,
-      },
-    );
+    final id = await _rpc('create_room', {
+      'p_name': name,
+      'p_goal': goal,
+      'p_deadline': deadline?.toUtc().toIso8601String(),
+      'p_max': maxMembers,
+    });
     return id as String;
   }
 
@@ -201,21 +198,25 @@ class CommunityRepository {
 
   /// 내가 속한 방 목록.
   Future<List<Room>> listMyRooms() async {
-    final rows = await _db.rpc('list_my_rooms') as List;
+    final rows = await _rpc('list_my_rooms', {}) as List;
     return rows.map((r) => Room.fromMap(r as Map<String, dynamic>)).toList();
   }
 
   /// 방 멤버 목록 (RLS: 같은 방 멤버만 조회 가능). FK가 1개라 임베드로 충분.
   Future<List<RoomMember>> roomMembers(String roomId) async {
-    final rows = await _db
-        .from('room_members')
-        .select(
-          'user_id, role, joined_at, profiles(handle, display_name, photo_url)',
-        )
-        .eq('room_id', roomId);
-    return (rows as List)
-        .map((r) => RoomMember.fromMap(r as Map<String, dynamic>))
-        .toList();
+    try {
+      final rows = await _db
+          .from('room_members')
+          .select(
+            'user_id, role, joined_at, profiles(handle, display_name, photo_url)',
+          )
+          .eq('room_id', roomId);
+      return (rows as List)
+          .map((r) => RoomMember.fromMap(r as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw _map(e);
+    }
   }
 
   /// 방 나가기. 방장이 나가면 위임 또는 방 삭제가 일어난다.
