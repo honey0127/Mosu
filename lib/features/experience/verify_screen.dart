@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/experience.dart';
 import '../../models/app_state.dart';
+import '../../models/wardrobe_item.dart';
 import '../shell/main_shell.dart';
 
 class VerifyScreen extends StatefulWidget {
@@ -178,8 +179,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
   // ── 완료 처리 ───────────────────────────────────────────────
   void _complete() {
     if (_completed) return;
-    AppState.i.addPoints(widget.exp.difficulty.points);
-    AppState.i.completedIds.add(widget.exp.id);
+    // completeExperience: 포인트 지급 + 카테고리 카운트 + 아이템 자동 해금
+    final newItems = AppState.i.completeExperience(widget.exp);
     setState(() => _completed = true);
 
     showDialog(
@@ -187,12 +188,13 @@ class _VerifyScreenState extends State<VerifyScreen> {
       barrierDismissible: false,
       builder: (_) => _RewardDialog(
         exp: widget.exp,
-        onClose: () {                                      // ← 이 부분 수정
+        newItems: newItems,
+        onClose: () {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
               builder: (_) => const MainShell(initialIndex: 3),
             ),
-                (route) => false,
+            (route) => false,
           );
         },
       ),
@@ -467,37 +469,41 @@ class _VerifyScreenState extends State<VerifyScreen> {
   }
 }
 
-// ─── 포인트 획득 다이얼로그 ───────────────────────────────────────────────────
+// ─── 포인트 획득 + 아이템 해금 다이얼로그 ────────────────────────────────────
 class _RewardDialog extends StatelessWidget {
   final Experience exp;
+  final List<WardrobeItem> newItems;
   final VoidCallback onClose;
 
-  const _RewardDialog({required this.exp, required this.onClose});
+  const _RewardDialog({
+    required this.exp,
+    required this.newItems,
+    required this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape:
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🎉', style: TextStyle(fontSize: 56)),
+            Text(newItems.isNotEmpty ? '🎁' : '🎉',
+                style: const TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
             const Text('경험 완료!',
-                style: TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(exp.title,
-                style: TextStyle(
-                    color: Colors.grey.shade500, fontSize: 14),
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                 textAlign: TextAlign.center),
             const SizedBox(height: 20),
+
+            // ── 포인트 배지 ──────────────────────────────────────
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 24, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               decoration: BoxDecoration(
                 color: const Color(0xFFEEEDFE),
                 borderRadius: BorderRadius.circular(16),
@@ -517,8 +523,85 @@ class _RewardDialog extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text('현재 포인트: ${AppState.i.points}P',
-                style: TextStyle(
-                    fontSize: 13, color: Colors.grey.shade500)),
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+
+            // ── 새로 해금된 아이템 ────────────────────────────────
+            if (newItems.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFFCC02), width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('🔓', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${exp.category.label} 경험으로 아이템 해금!',
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFBF8C00)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: newItems.map((item) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.06),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(item.emoji,
+                                style: const TextStyle(fontSize: 22)),
+                            const SizedBox(width: 6),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.name,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600)),
+                                Text(
+                                  item.dimension == SelfDimension.external
+                                      ? '캐릭터 아이템'
+                                      : '방 아이템',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey.shade500),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      )).toList(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -530,8 +613,10 @@ class _RewardDialog extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: onClose,
-                child: const Text('도장 확인하러 가기! →',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(
+                  newItems.isNotEmpty ? '내 공간 꾸미러 가기! →' : '도장 확인하러 가기! →',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],

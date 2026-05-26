@@ -37,6 +37,7 @@ class Experience {
   final int courage;
   final int cost;
   final bool isFit;
+  final ExperienceCategory category;
 
   const Experience({
     required this.id,
@@ -48,6 +49,7 @@ class Experience {
     required this.courage,
     required this.cost,
     required this.isFit,
+    required this.category,
   });
 }
 

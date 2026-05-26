@@ -1,4 +1,3 @@
-import 'animal.dart';
 import 'wardrobe_item.dart';
 import 'experience.dart';
 
@@ -21,14 +20,8 @@ class AppState {
   };
 
   // ── 캐릭터/방 신규 시스템 ─────────────────────────────────────────────────
-  /// 선택된 동물 (캐릭터 베이스). null = 아직 미선택 → picker 띄워야 함
-  String? selectedAnimalId;
-
-  Animal? get selectedAnimal => animalById(selectedAnimalId);
-
-  void selectAnimal(String id) {
-    selectedAnimalId = id;
-  }
+  /// 선택된 얼굴 이모지 (캐릭터 베이스)
+  String selectedFaceEmoji = '🐱';
 
   /// 잠금 해제된 캐릭터/방 아이템 id 집합 (실 경험을 통해서만 해제됨)
   Set<String> wardrobeUnlocked = {};
@@ -55,6 +48,44 @@ class AppState {
   void addPoints(int p) {
     points += p;
     totalEarned += p;
+  }
+
+  /// 경험 완료 — 포인트 지급 + 카테고리 카운트 + 아이템 자동 해금
+  /// 새로 해금된 아이템 목록을 반환 (RewardDialog에서 표시용)
+  List<WardrobeItem> completeExperience(Experience exp) {
+    addPoints(exp.difficulty.points);
+    completedIds.add(exp.id);
+
+    // 카테고리 카운트 업데이트
+    categoryCounts[exp.category] =
+        (categoryCounts[exp.category] ?? 0) + 1;
+
+    final newlyUnlocked = <WardrobeItem>[];
+
+    for (final item in allWardrobeItems) {
+      if (wardrobeUnlocked.contains(item.id)) continue;
+      if (item.category != exp.category) continue;
+
+      // 무료 아이템 → 즉시 자동 해금
+      if (item.cost == 0) {
+        wardrobeUnlocked.add(item.id);
+        newlyUnlocked.add(item);
+        continue;
+      }
+
+      // 유료 아이템 → 해당 카테고리 누적 횟수 기반 해금
+      // 1회: cost ≤ 50 / 3회: cost ≤ 100 / 5회: 전체
+      final count = categoryCounts[exp.category] ?? 0;
+      final unlockable = (count >= 5) ||
+          (count >= 3 && item.cost <= 100) ||
+          (count >= 1 && item.cost <= 50);
+      if (unlockable) {
+        wardrobeUnlocked.add(item.id);
+        newlyUnlocked.add(item);
+      }
+    }
+
+    return newlyUnlocked;
   }
 
   bool buy(String id, int cost) {
