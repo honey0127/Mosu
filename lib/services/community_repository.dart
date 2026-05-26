@@ -71,8 +71,8 @@ class CommunityRepository {
   /// 내 표시 이름/사진 갱신.
   Future<void> updateProfile({String? displayName, String? photoUrl}) async {
     final patch = <String, dynamic>{
-      'display_name': ?displayName,
-      'photo_url': ?photoUrl,
+      if (displayName != null) 'display_name': displayName,
+      if (photoUrl != null) 'photo_url': photoUrl,
     };
     if (patch.isEmpty) return;
     await _db.from('profiles').update(patch).eq('id', _requireUid());
