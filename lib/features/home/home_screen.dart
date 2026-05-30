@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../data/experience_data.dart';
 import '../../models/experience.dart';
@@ -13,8 +14,30 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkLevelUp();
+  }
+
   void _refresh() {
     if (mounted) setState(() {});
+    _checkLevelUp();
+  }
+
+  void _checkLevelUp() {
+    final level = AppState.i.pendingLevelUp;
+    if (level == null) return;
+    AppState.i.pendingLevelUp = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierColor: Colors.black.withValues(alpha: 0.65),
+        barrierDismissible: true,
+        builder: (_) => _LevelUpDialog(level: level),
+      );
+    });
   }
 
   // ── 주간 경험 추천 (완료된 경험 제외, 1주마다 자동 갱신) ───────────────────
@@ -225,27 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7DB879)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              const Text('⭐',
-                                  style: TextStyle(fontSize: 16)),
-                              const SizedBox(width: 6),
-                              Text('${state.points}P',
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF5A9A4A))),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -337,11 +339,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: '완료 경험',
                         value: '${state.completedIds.length}개',
                         emoji: '✅'),
-                    const SizedBox(width: 12),
-                    _StatCard(
-                        label: '총 포인트',
-                        value: '${state.totalEarned}P',
-                        emoji: '⭐'),
+
                     const SizedBox(width: 12),
                     _StatCard(
                         label: '잠금 해제',
@@ -663,4 +661,250 @@ class _CompletedCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ═══════════════════════════ 레벨업 팝업 ════════════════════════════════════
+
+class _LevelUpDialog extends StatefulWidget {
+  final int level;
+  const _LevelUpDialog({required this.level});
+
+  @override
+  State<_LevelUpDialog> createState() => _LevelUpDialogState();
+}
+
+class _LevelUpDialogState extends State<_LevelUpDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final List<_LUParticle> _particles;
+
+  bool get _isMilestone => widget.level % 5 == 0;
+
+  // 강렬한 색상 팔레트
+  static const _palette = [
+    Color(0xFFFF3B3B), Color(0xFFFFD700), Color(0xFF00E676),
+    Color(0xFF2979FF), Color(0xFFFF4081), Color(0xFFFF6D00),
+    Color(0xFFE040FB), Color(0xFF00BCD4), Color(0xFFFFFFFF),
+    Color(0xFFFFEB3B), Color(0xFF76FF03), Color(0xFF40C4FF),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 5레벨 단위마다 강도 상승 (1~5)
+    final intensity = (((widget.level - 1) ~/ 5) + 1).clamp(1, 5);
+    final burstCount = 4 + intensity * 2;        // 6 ~ 14 bursts
+    final perBurst   = 30 + intensity * 15;      // 45 ~ 105 particles/burst
+    final durationMs = 2500 + intensity * 500;   // 3000 ~ 5000ms
+
+    final rng = Random();
+    _particles = [];
+
+    for (int b = 0; b < burstCount; b++) {
+      // 화면 전체에 분산된 버스트 위치
+      final ox = 0.05 + rng.nextDouble() * 0.90;
+      final oy = 0.05 + rng.nextDouble() * 0.60;
+      final delay = (b * 0.12).clamp(0.0, 0.55);
+
+      for (int i = 0; i < perBurst; i++) {
+        final angle = rng.nextDouble() * 2 * pi;
+        final speed = 0.2 + rng.nextDouble() * (0.5 + intensity * 0.08);
+        _particles.add(_LUParticle(
+          origin: Offset(ox, oy),
+          angle: angle,
+          speed: speed,
+          color: _palette[rng.nextInt(_palette.length)],
+          radius: 3.0 + rng.nextDouble() * 5.0,
+          delay: delay,
+          isStar: rng.nextDouble() < 0.25, // 25% 별 모양
+        ));
+      }
+    }
+
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: durationMs),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── 폭죽 파티클 ──────────────────────────────────────────
+          AnimatedBuilder(
+            animation: _ctrl,
+            builder: (context, _) => CustomPaint(
+              painter: _LUPainter(_particles, _ctrl.value),
+              size: Size.infinite,
+            ),
+          ),
+
+          // ── 중앙 레벨업 카드 ──────────────────────────────────────
+          Center(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.6, end: 1.0),
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.elasticOut,
+              builder: (_, scale, child) =>
+                  Transform.scale(scale: scale, child: child),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 32, vertical: 28),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_isMilestone
+                              ? const Color(0xFFFFD700)
+                              : const Color(0xFF7DB879))
+                          .withValues(alpha: 0.4),
+                      blurRadius: 30,
+                      spreadRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_isMilestone ? '✨' : '🎊',
+                        style: const TextStyle(fontSize: 64)),
+                    const SizedBox(height: 12),
+                    Text(
+                      _isMilestone ? '${widget.level}레벨 달성!' : '레벨 업!',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: _isMilestone
+                            ? const Color(0xFFFF8C00)
+                            : const Color(0xFF5A9A4A),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '탐험가 Lv.${widget.level}',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600),
+                    ),
+                    if (_isMilestone) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFB347), Color(0xFFFFD700)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('마일스톤 달성! 🏆',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    Text('화면을 탭하면 닫혀요',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade400)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── 파티클 모델 ──────────────────────────────────────────────────────────────
+class _LUParticle {
+  final Offset origin;
+  final double angle;
+  final double speed;
+  final Color color;
+  final double radius;
+  final double delay;
+  final bool isStar;
+
+  const _LUParticle({
+    required this.origin,
+    required this.angle,
+    required this.speed,
+    required this.color,
+    required this.radius,
+    required this.delay,
+    required this.isStar,
+  });
+}
+
+// ─── CustomPainter ────────────────────────────────────────────────────────────
+class _LUPainter extends CustomPainter {
+  final List<_LUParticle> particles;
+  final double t;
+
+  const _LUPainter(this.particles, this.t);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    for (final p in particles) {
+      final remaining = 1.0 - p.delay;
+      final local =
+          remaining <= 0 ? 0.0 : ((t - p.delay) / remaining).clamp(0.0, 1.0);
+      if (local <= 0) continue;
+
+      final dx = cos(p.angle) * p.speed * local * size.width;
+      final dy = sin(p.angle) * p.speed * local * size.height
+               + 0.30 * local * local * size.height; // 중력
+
+      final x = p.origin.dx * size.width + dx;
+      final y = p.origin.dy * size.height + dy;
+
+      // 초반 0.55 구간 불투명, 이후 점진적 소멸
+      final opacity = local < 0.55 ? 1.0 : (1.0 - (local - 0.55) / 0.45);
+      final r = p.radius * (1.0 - local * 0.35);
+
+      paint.color = p.color.withValues(alpha: opacity.clamp(0.0, 1.0));
+
+      if (p.isStar) {
+        _drawStar(canvas, paint, Offset(x, y), r.clamp(1.0, 12.0));
+      } else {
+        canvas.drawCircle(Offset(x, y), r.clamp(0.5, 10.0), paint);
+      }
+    }
+  }
+
+  void _drawStar(Canvas canvas, Paint paint, Offset center, double r) {
+    final path = Path();
+    const pts = 4;
+    for (int i = 0; i < pts * 2; i++) {
+      final a = (pi / pts) * i - pi / 2;
+      final len = i.isEven ? r : r * 0.45;
+      final pt = Offset(center.dx + cos(a) * len, center.dy + sin(a) * len);
+      i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_LUPainter old) => old.t != t;
 }

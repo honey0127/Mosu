@@ -146,7 +146,7 @@ class _ExperienceCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${exp.difficulty.emoji} +${exp.difficulty.points}P',
+                  '${exp.difficulty.emoji} ${exp.difficulty.label}',
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

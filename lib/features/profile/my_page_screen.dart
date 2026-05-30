@@ -228,23 +228,6 @@ class _MyPageScreenState extends State<MyPageScreen>
                     ],
                   ),
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F3E3),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '⭐ ${state.points}P',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF5A9A4A),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -1060,8 +1043,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                 value: '${state.completedIds.length}',
                 label: '완료한 목표',
               ),
-              _statDivider(),
-              _ProfileStat(value: '${state.points}', label: '포인트'),
+
               _statDivider(),
               _ProfileStat(value: '$week', label: '활동 주차'),
             ],
