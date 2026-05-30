@@ -20,10 +20,12 @@ class RoomChatScreen extends StatefulWidget {
 class _RoomChatScreenState extends State<RoomChatScreen> {
   final _repo = CommunityRepository();
   final _input = TextEditingController();
+  final _scrollCtrl = ScrollController();
   late final Stream<List<RoomMessage>> _stream;
 
   Map<String, RoomMember> _members = const {};
   bool _sending = false;
+  List<RoomMessage> _prevMsgs = const [];
 
   @override
   void initState() {
@@ -35,7 +37,20 @@ class _RoomChatScreenState extends State<RoomChatScreen> {
   @override
   void dispose() {
     _input.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _loadMembers() async {
@@ -95,14 +110,16 @@ class _RoomChatScreenState extends State<RoomChatScreen> {
                 if (msgs.isEmpty) {
                   return const _CenteredHint(text: '첫 메시지를 남겨보세요!');
                 }
-                // 최신이 아래로 오도록 reverse 리스트 + reverse 스크롤.
-                final reversed = msgs.reversed.toList();
+                if (msgs.length != _prevMsgs.length) {
+                  _prevMsgs = msgs;
+                  _scrollToBottom();
+                }
                 return ListView.builder(
-                  reverse: true,
+                  controller: _scrollCtrl,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  itemCount: reversed.length,
+                  itemCount: msgs.length,
                   itemBuilder: (_, i) {
-                    final m = reversed[i];
+                    final m = msgs[i];
                     return _MessageBubble(
                       message: m,
                       isMine: m.userId == myId,
