@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../services/community_repository.dart';
+import 'growth_report_card.dart';
 
 /// 마이 → 캘린더 탭.
 /// 내 인증 기록을 날짜별로 모아, 승인된 날은 파랑·거절된 날은 빨강으로 표시한다.
@@ -103,6 +104,7 @@ class _MissionCalendarTabState extends State<MissionCalendarTab> {
           _grid(),
           const SizedBox(height: 20),
           if (_selected != null) _dayDetail(),
+          const GrowthReportCard(),
         ],
       ),
     );
