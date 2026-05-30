@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/app_state.dart';
 
 class AuthService {
@@ -13,6 +14,7 @@ class AuthService {
   static const _kUserKeywords = 'auth_user_keywords';
   static const _kCurrentUser  = 'auth_current_user'; // 자동 로그인용
   static const _kAppStates    = 'auth_app_states';   // 유저별 AppState
+  static const _kSupaSessions = 'auth_supa_sessions'; // 유저별 Supabase 세션
 
   /// 프로필 사진을 캐릭터(내 공간에서 만든 동물 얼굴)로 설정했을 때의 값.
   /// 이 값이 아니면서 null도 아니면 갤러리 사진 파일 경로로 해석한다.
@@ -102,6 +104,8 @@ class AuthService {
     if (savedUser != null && _users.containsKey(savedUser)) {
       _currentUserId = savedUser;
       await _loadAppState(savedUser);
+      // Supabase 세션도 복원 (없으면 ensureSignedIn()이 새로 생성)
+      await _restoreSupabaseSession(savedUser);
     }
   }
 
@@ -186,6 +190,43 @@ class AuthService {
     AppState.i.loadFromJson(data as Map<String, dynamic>);
   }
 
+  // 유저별 Supabase 세션 저장 (로컬에만 보관)
+  static Future<void> _saveSupabaseSession(String userId) async {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session?.refreshToken == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kSupaSessions);
+    final Map<String, dynamic> all =
+        raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
+    all[userId] = session!.refreshToken;
+    await prefs.setString(_kSupaSessions, jsonEncode(all));
+  }
+
+  // 유저별 Supabase 세션 복원. 저장된 세션이 없거나 만료됐으면 false 반환.
+  static Future<bool> _restoreSupabaseSession(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kSupaSessions);
+    if (raw == null) return false;
+    final all = jsonDecode(raw) as Map<String, dynamic>;
+    final refreshToken = all[userId] as String?;
+    if (refreshToken == null) return false;
+    try {
+      await Supabase.instance.client.auth.setSession(refreshToken);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Supabase 로컬 세션만 삭제 (서버 토큰 유지)
+  static Future<void> _signOutSupabase() async {
+    try {
+      await Supabase.instance.client.auth.signOut(
+        scope: SignOutScope.local,
+      );
+    } catch (_) {}
+  }
+
   // ── 공개 API ──────────────────────────────────────────────────────────────
 
   /// 로그인. 성공 시 유저 정보 Map 반환, 실패 시 null
@@ -193,13 +234,17 @@ class AuthService {
     final user = _users[id];
     if (user == null) return null;
     if (user['password'] != password) return null;
-    // 다른 유저였다면 현재 상태 저장
+    // 다른 유저였다면 현재 상태·Supabase 세션 저장 후 세션 해제
     if (_currentUserId != null && _currentUserId != id) {
       await _saveAppState(_currentUserId!);
+      await _saveSupabaseSession(_currentUserId!);
+      await _signOutSupabase();
     }
     _currentUserId = id;
     await _saveCurrentUser();
     await _loadAppState(id);
+    // 이 유저의 Supabase 세션 복원 (없으면 ensureSignedIn()이 새로 생성)
+    await _restoreSupabaseSession(id);
     return user;
   }
 
@@ -304,9 +349,11 @@ class AuthService {
   static Future<void> logout() async {
     if (_currentUserId != null) {
       await _saveAppState(_currentUserId!);
+      await _saveSupabaseSession(_currentUserId!);
     }
     _currentUserId = null;
     AppState.i.reset();
+    await _signOutSupabase();
     await _saveCurrentUser();
   }
 
