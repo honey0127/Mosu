@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// 커뮤니티(프로필·친구·방·초대코드) Supabase 접근 계층.
@@ -232,19 +235,57 @@ class CommunityRepository {
 
   // ── 인증 (미션 사진 인증) ─────────────────────────────────────────────────────
 
-  /// 인증 사진을 Storage('verifications' 버킷)에 올리고 공개 URL을 반환.
-  Future<String> uploadVerificationPhoto(File file) async {
+  // Supabase 스토리지 REST 엔드포인트(직접 업로드용).
+  static const String _supabaseUrl = 'https://wqkwmkiqtovclqrsevae.supabase.co';
+  static const String _anonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indxa3dta2lxdG92Y2xxcnNldmFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1ODY1MjgsImV4cCI6MjA5NTE2MjUyOH0.nRLx_41Hjad_YKvdIIUCqImmRWKTJeZAGecvEgi1EGE';
+
+  /// 인증 사진(바이트)을 Storage('verifications' 버킷)에 올리고 공개 URL을 반환.
+  ///
+  /// supabase_flutter 스토리지 클라이언트가 안드로이드에서 간헐적으로 멈추는
+  /// 문제가 있어, dart:io HttpClient 로 REST 엔드포인트에 직접 POST 한다.
+  Future<String> uploadVerificationPhoto(
+    Uint8List bytes, {
+    required String fileExt,
+  }) async {
     final uid = _requireUid();
-    final ext = file.path.split('.').last.toLowerCase();
-    final safeExt = const {'png', 'jpg', 'jpeg', 'webp'}.contains(ext)
-        ? ext
+    final token = _db.auth.currentSession?.accessToken;
+    if (token == null) throw CommunityException('로그인이 필요해요.');
+
+    final safeExt = const {'png', 'jpg', 'jpeg', 'webp'}.contains(fileExt)
+        ? fileExt
         : 'jpg';
+    final contentType = switch (safeExt) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => 'image/jpeg',
+    };
     final path = '$uid/${DateTime.now().millisecondsSinceEpoch}.$safeExt';
+    final uri = Uri.parse('$_supabaseUrl/storage/v1/object/verifications/$path');
+
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 15);
     try {
-      await _db.storage.from('verifications').upload(path, file);
-      return _db.storage.from('verifications').getPublicUrl(path);
-    } on StorageException catch (e) {
-      throw CommunityException('사진 업로드에 실패했어요. (${e.message})');
+      final req = await client.postUrl(uri);
+      req.headers.set('apikey', _anonKey);
+      req.headers.set('Authorization', 'Bearer $token');
+      req.headers.set('content-type', contentType);
+      req.headers.set('x-upsert', 'true');
+      // Content-Length 명시 — 미설정 시 chunked 전송이 되어 스토리지가 거부/멈춤.
+      req.contentLength = bytes.length;
+      req.add(bytes);
+      final resp = await req.close().timeout(const Duration(seconds: 25));
+      final respBody = await resp.transform(utf8.decoder).join();
+      if (resp.statusCode == 200) {
+        return '$_supabaseUrl/storage/v1/object/public/verifications/$path';
+      }
+      throw CommunityException('사진 업로드에 실패했어요. (${resp.statusCode} $respBody)');
+    } on TimeoutException {
+      throw CommunityException('사진 업로드가 지연되고 있어요. 네트워크를 확인하고 다시 시도해 주세요.');
+    } on SocketException catch (e) {
+      throw CommunityException('네트워크 연결을 확인해 주세요. (${e.message})');
+    } finally {
+      client.close(force: true);
     }
   }
 
@@ -260,7 +301,9 @@ class CommunityRepository {
         'user_id': _requireUid(),
         'photo_url': photoUrl,
         'caption': caption,
-      });
+      }).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw CommunityException('제출이 지연되고 있어요. 네트워크를 확인하고 다시 시도해 주세요.');
     } on PostgrestException catch (e) {
       throw _map(e);
     }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -126,28 +127,84 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     );
     if (caption == null) return; // 취소
 
+    // 파일 경로가 아닌 바이트로 읽어 둔다(안드로이드 캐시 경로 업로드 멈춤 회피).
+    final Uint8List bytes;
+    try {
+      bytes = await picked.readAsBytes();
+    } catch (_) {
+      _snack('사진을 읽지 못했어요. 다시 시도해 주세요.');
+      return;
+    }
+    final ext = imgPath.split('.').last.toLowerCase();
+    debugPrint('[verify] bytes read: ${bytes.length} bytes, ext=$ext');
+
     if (!mounted) return;
+
+    var dialogOpen = true;
+    void closeDialog() {
+      if (dialogOpen && mounted) {
+        dialogOpen = false;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: const Row(
+            children: [
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              SizedBox(width: 16),
+              Expanded(child: Text('인증 사진 업로드 중…')),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: closeDialog,
+              child: const Text('취소'),
+            ),
+          ],
+        ),
+      ),
     );
+
     try {
-      final url = await _repo.uploadVerificationPhoto(File(imgPath));
-      await _repo.submitVerification(
-        roomId: widget.roomId,
-        photoUrl: url,
-        caption: caption.trim().isEmpty ? null : caption.trim(),
-      );
-      if (mounted) Navigator.pop(context); // 진행 다이얼로그 닫기
+      debugPrint('[verify] upload start…');
+      final url = await _repo
+          .uploadVerificationPhoto(bytes, fileExt: ext)
+          .timeout(const Duration(seconds: 20));
+      debugPrint('[verify] upload done: $url');
+      await _repo
+          .submitVerification(
+            roomId: widget.roomId,
+            photoUrl: url,
+            caption: caption.trim().isEmpty ? null : caption.trim(),
+          )
+          .timeout(const Duration(seconds: 12));
+      debugPrint('[verify] submit done');
+      closeDialog();
+      if (!mounted) return;
       _snack('인증을 제출했어요! 방장·관리자 확인을 기다려요.');
       _reload();
+    } on TimeoutException {
+      debugPrint('[verify] TIMEOUT');
+      closeDialog();
+      _snack('업로드가 너무 오래 걸려요. 네트워크를 확인하고 다시 시도해 주세요.');
     } on CommunityException catch (e) {
-      if (mounted) Navigator.pop(context);
+      debugPrint('[verify] CommunityException: ${e.message}');
+      closeDialog();
       _snack(e.message);
-    } catch (_) {
-      if (mounted) Navigator.pop(context);
-      _snack('인증 제출에 실패했어요.');
+    } catch (e) {
+      debugPrint('[verify] ERROR: $e');
+      closeDialog();
+      _snack('인증 제출에 실패했어요. ($e)');
     }
   }
 
@@ -455,98 +512,131 @@ class _VerificationCard extends StatelessWidget {
 
   String _fmtDate(DateTime d) => '${d.month}월 ${d.day}일';
 
-  @override
-  Widget build(BuildContext context) {
-    final hasCaption = v.caption != null && v.caption!.isNotEmpty;
-    final showActions = canReview && v.isPending;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+  void _openDetail(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 헤더: 작성자 + 상태
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    v.authorName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+      builder: (sheetContext) {
+        final hasCaption = v.caption != null && v.caption!.isNotEmpty;
+        final showActions = canReview && v.isPending;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 헤더: 작성자 + 상태
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        v.authorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                _StatusBadge(status: v.status),
-              ],
-            ),
-          ),
-          // 사진
-          AspectRatio(
-            aspectRatio: 1,
-            child: Image.network(
-              v.photoUrl,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) => progress == null
-                  ? child
-                  : Container(
-                      color: Colors.grey.shade100,
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-              errorBuilder: (_, _, _) => Container(
-                color: Colors.grey.shade100,
-                child: Icon(
-                  Icons.broken_image_outlined,
-                  color: Colors.grey.shade400,
+                    _StatusBadge(status: v.status),
+                  ],
                 ),
               ),
-            ),
-          ),
-          // 푸터: 캡션 + 날짜 + 승인/거절
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (hasCaption) ...[
-                  Text(v.caption!, style: const TextStyle(fontSize: 13)),
-                  const SizedBox(height: 6),
-                ],
-                Text(
-                  _fmtDate(v.createdAt),
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                ),
-                if (v.isRejected && v.rejectReason != null && v.rejectReason!.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '거절 사유: ${v.rejectReason}',
-                      style: TextStyle(fontSize: 12, color: Colors.red.shade700),
-                    ),
+              // 사진
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(
+                          v.photoUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                              ? child
+                              : Container(
+                                  color: Colors.grey.shade100,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                          errorBuilder: (_, _, _) => Container(
+                            color: Colors.grey.shade100,
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (hasCaption) ...[
+                              Text(
+                                v.caption!,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              const SizedBox(height: 6),
+                            ],
+                            Text(
+                              _fmtDate(v.createdAt),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                            if (v.isRejected &&
+                                v.rejectReason != null &&
+                                v.rejectReason!.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '거절 사유: ${v.rejectReason}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-                if (showActions) ...[
-                  const SizedBox(height: 12),
-                  Row(
+                ),
+              ),
+              if (showActions)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => onReview(false),
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop();
+                            onReview(false);
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red.shade400,
                             side: BorderSide(color: Colors.red.shade200),
@@ -557,7 +647,10 @@ class _VerificationCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: FilledButton(
-                          onPressed: () => onReview(true),
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop();
+                            onReview(true);
+                          },
                           style: FilledButton.styleFrom(
                             backgroundColor: AppColors.primary,
                           ),
@@ -566,11 +659,51 @@ class _VerificationCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ],
-              ],
-            ),
+                ),
+            ],
           ),
-        ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () => _openDetail(context),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  v.authorName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _StatusBadge(status: v.status),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -719,12 +852,14 @@ class _CaptionDialogState extends State<_CaptionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      scrollable: true,
       title: const Text('인증 올리기'),
       insetPadding: EdgeInsets.fromLTRB(
         24, 24, 24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      content: SingleChildScrollView(
+      content: SizedBox(
+        width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -783,19 +918,23 @@ class _RejectReasonDialogState extends State<_RejectReasonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      scrollable: true,
       title: const Text('거절 사유'),
       insetPadding: EdgeInsets.fromLTRB(
         24, 24, 24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      content: TextField(
-        controller: _ctrl,
-        autofocus: true,
-        maxLength: 100,
-        maxLines: 3,
-        decoration: const InputDecoration(
-          hintText: '사유를 입력하세요 (선택)',
-          border: OutlineInputBorder(),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: TextField(
+          controller: _ctrl,
+          autofocus: true,
+          maxLength: 100,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: '사유를 입력하세요 (선택)',
+            border: OutlineInputBorder(),
+          ),
         ),
       ),
       actions: [
