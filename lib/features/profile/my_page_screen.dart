@@ -7,6 +7,7 @@ import '../../models/experience.dart';
 import '../../data/experience_data.dart';
 import '../../services/auth_service.dart';
 import '../../services/community_repository.dart';
+import '../auth/login_screen.dart';
 import '../onboarding/onboarding_profile_screen.dart';
 import 'mission_calendar_tab.dart';
 
@@ -756,6 +757,14 @@ class _SettingsTab extends StatelessWidget {
             subtitle: '나이, MBTI, 직업, 취미를 다시 입력할 수 있어요',
             onTap: () => _confirmReset(context, userId),
           ),
+          const SizedBox(height: 12),
+          _SettingItem(
+            icon: Icons.logout_rounded,
+            label: '로그아웃',
+            subtitle: '계정에서 로그아웃해요',
+            onTap: () => _confirmLogout(context),
+            isDanger: true,
+          ),
         ],
       ),
     );
@@ -787,6 +796,49 @@ class _SettingsTab extends StatelessWidget {
         content: Text(syncError ?? '닉네임을 변경했어요.'),
         backgroundColor: syncError != null ? Colors.red.shade400 : null,
       ),
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          '로그아웃',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        content: const Text(
+          '정말 로그아웃 하시겠어요?',
+          style: TextStyle(fontSize: 14, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red.shade400,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('로그아웃'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    AuthService.logout();
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
     );
   }
 
@@ -1213,16 +1265,21 @@ class _SettingItem extends StatelessWidget {
   final String label;
   final String subtitle;
   final VoidCallback onTap;
+  final bool isDanger;
 
   const _SettingItem({
     required this.icon,
     required this.label,
     required this.subtitle,
     required this.onTap,
+    this.isDanger = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconBg = isDanger ? Colors.red.shade50 : const Color(0xFFE8F3E3);
+    final iconColor = isDanger ? Colors.red.shade400 : const Color(0xFF7DB879);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1230,7 +1287,9 @@ class _SettingItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade100),
+          border: Border.all(
+            color: isDanger ? Colors.red.shade100 : Colors.grey.shade100,
+          ),
         ),
         child: Row(
           children: [
@@ -1238,10 +1297,10 @@ class _SettingItem extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8F3E3),
+                color: iconBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: 20, color: const Color(0xFF7DB879)),
+              child: Icon(icon, size: 20, color: iconColor),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1250,9 +1309,10 @@ class _SettingItem extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
+                      color: isDanger ? Colors.red.shade400 : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 2),

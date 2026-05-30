@@ -49,6 +49,30 @@ class AppState {
   /// 완료한 경험의 카테고리 카운트 (어떤 영역을 얼마나 채웠는지 추적)
   Map<ExperienceCategory, int> categoryCounts = {};
 
+  // ── 주간 홈 경험 추적 ─────────────────────────────────────────────────────
+  int homeWeekNumber = 0;
+  String? homeWeekFitId;
+  String? homeWeekDareId;
+  Set<String> homeWeekCompletedIds = {};
+  Set<String> homeWeekExcluded = {}; // 네 버튼 시 새 페어 선택에서 제외할 ID
+
+  void setWeeklyPair({
+    required int weekNum,
+    required String? fitId,
+    required String? dareId,
+  }) {
+    homeWeekNumber = weekNum;
+    homeWeekFitId = fitId;
+    homeWeekDareId = dareId;
+    homeWeekCompletedIds = {};
+  }
+
+  /// "네" 버튼: 다음 build에서 완료된 경험을 제외한 새 페어를 강제 선택하도록 예약
+  void markForRefresh(String completedId) {
+    homeWeekExcluded = {completedId};
+    homeWeekNumber = -1; // _pickPair()에서 재선택 트리거
+  }
+
   void addPoints(int p) {
     points += p;
     totalEarned += p;
@@ -59,6 +83,11 @@ class AppState {
   List<WardrobeItem> completeExperience(Experience exp) {
     addPoints(exp.difficulty.points);
     completedIds.add(exp.id);
+
+    // 이번 주 홈 경험 완료 추적
+    if (exp.id == homeWeekFitId || exp.id == homeWeekDareId) {
+      homeWeekCompletedIds.add(exp.id);
+    }
 
     // 카테고리 카운트 업데이트
     categoryCounts[exp.category] =

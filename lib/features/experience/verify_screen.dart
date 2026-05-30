@@ -189,13 +189,19 @@ class _VerifyScreenState extends State<VerifyScreen> {
       builder: (_) => _RewardDialog(
         exp: widget.exp,
         newItems: newItems,
-        onClose: () {
+        onYes: () {
+          // 완료한 경험을 제외하고 새 페어를 선택하도록 예약
+          AppState.i.markForRefresh(widget.exp.id);
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (_) => const MainShell(initialIndex: 3),
+              builder: (_) => const MainShell(initialIndex: 0),
             ),
             (route) => false,
           );
+        },
+        onNo: () {
+          Navigator.of(context).pop(); // 다이얼로그 닫기
+          if (mounted) Navigator.of(context).pop(); // VerifyScreen 닫기
         },
       ),
     );
@@ -473,23 +479,29 @@ class _VerifyScreenState extends State<VerifyScreen> {
 class _RewardDialog extends StatelessWidget {
   final Experience exp;
   final List<WardrobeItem> newItems;
-  final VoidCallback onClose;
+  final VoidCallback onYes;
+  final VoidCallback onNo;
 
   const _RewardDialog({
     required this.exp,
     required this.newItems,
-    required this.onClose,
+    required this.onYes,
+    required this.onNo,
   });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Text(newItems.isNotEmpty ? '🎁' : '🎉',
                 style: const TextStyle(fontSize: 56)),
             const SizedBox(height: 16),
@@ -603,23 +615,51 @@ class _RewardDialog extends StatelessWidget {
             ],
 
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF7DB879),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: onClose,
-                child: Text(
-                  newItems.isNotEmpty ? '내 공간 꾸미러 가기! →' : '도장 확인하러 가기! →',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
+            const Text(
+              '새로운 경험을 추가하시겠습니까?',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
             ),
-          ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      onPressed: onNo,
+                      child: const Text('아니오',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF7DB879),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: onYes,
+                      child: const Text('네',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            ],
+          ),
         ),
       ),
     );
