@@ -10,6 +10,11 @@ class MainShell extends StatefulWidget {
   final int initialIndex;
   const MainShell({super.key, this.initialIndex = 0});
 
+  /// 현재 살아있는 MainShell의 탭을 바꾸는 진입점.
+  /// AnimalPickerScreen 등 자식 화면이 직접 호출해서 홈으로 돌아갈 때 사용.
+  static void Function(int)? _setTab;
+  static void goToTab(int i) => _setTab?.call(i);
+
   @override
   State<MainShell> createState() => _MainShellState();
 }
@@ -18,9 +23,18 @@ class _MainShellState extends State<MainShell> {
   late int _index = 0;
 
   @override
-  void initState() {                               // ← 추가
+  void initState() {
     super.initState();
-    _index = widget.initialIndex;                  // ← 추가
+    _index = widget.initialIndex;
+    MainShell._setTab = (i) {
+      if (mounted) setState(() => _index = i);
+    };
+  }
+
+  @override
+  void dispose() {
+    MainShell._setTab = null;
+    super.dispose();
   }
 
   Widget get _body {

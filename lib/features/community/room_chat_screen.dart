@@ -95,14 +95,14 @@ class _RoomChatScreenState extends State<RoomChatScreen> {
                 if (msgs.isEmpty) {
                   return const _CenteredHint(text: '첫 메시지를 남겨보세요!');
                 }
-                // 최신이 아래로 오도록 reverse 리스트 + reverse 스크롤.
-                final reversed = msgs.reversed.toList();
+                // 스트림이 최신순(내림차순)으로 오므로 reverse:true 로
+                // index 0(최신)을 화면 맨 아래에 표시 → 카카오톡 스타일
                 return ListView.builder(
                   reverse: true,
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  itemCount: reversed.length,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  itemCount: msgs.length,
                   itemBuilder: (_, i) {
-                    final m = reversed[i];
+                    final m = msgs[i];
                     return _MessageBubble(
                       message: m,
                       isMine: m.userId == myId,

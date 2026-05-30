@@ -21,10 +21,17 @@ class AppState {
     'badge': null,
   };
 
-  // 캐릭터/방 시스템
+  // ── 캐릭터/방 시스템 ─────────────────────────────────────────────────────
+  String selectedFaceEmoji = '🐱';
   String? selectedAnimalId;
+
   Animal? get selectedAnimal => animalById(selectedAnimalId);
-  void selectAnimal(String id) => selectedAnimalId = id;
+
+  void selectAnimal(String id) {
+    selectedAnimalId = id;
+    final a = animalById(id);
+    if (a != null) selectedFaceEmoji = a.emoji;
+  }
 
   Set<String> wardrobeUnlocked = {};
 
@@ -44,7 +51,7 @@ class AppState {
 
   Map<ExperienceCategory, int> categoryCounts = {};
 
-  // AI 생성 소품 인벤토리
+  // ── AI 생성 소품 인벤토리 ──────────────────────────────────────────────────
   List<DecoItem> aiDecoItems = [];
 
   void addAiDecoItem(DecoItem item) {
@@ -54,6 +61,29 @@ class AppState {
 
   List<DecoItem> get allOwnedDecoItems =>
       allItems.where((it) => unlockedIds.contains(it.id)).toList() + aiDecoItems;
+
+  // ── 주간 홈 경험 추적 ─────────────────────────────────────────────────────
+  int homeWeekNumber = 0;
+  String? homeWeekFitId;
+  String? homeWeekDareId;
+  Set<String> homeWeekCompletedIds = {};
+  Set<String> homeWeekExcluded = {};
+
+  void setWeeklyPair({
+    required int weekNum,
+    required String? fitId,
+    required String? dareId,
+  }) {
+    homeWeekNumber = weekNum;
+    homeWeekFitId = fitId;
+    homeWeekDareId = dareId;
+    homeWeekCompletedIds = {};
+  }
+
+  void markForRefresh(String completedId) {
+    homeWeekExcluded = {completedId};
+    homeWeekNumber = -1;
+  }
 
   void addPoints(int p) {
     points += p;
@@ -78,6 +108,8 @@ class AppState {
   }
 
   // 장착/해제
+  void equip(String slot, String id) => equipped[slot] = id;
+
   void equipCharacter(String slot, String? id) {
     characterEquipped[slot] = id;
   }
@@ -86,9 +118,29 @@ class AppState {
     roomEquipped[slot] = id;
   }
 
+  bool buy(String id, int cost) {
+    if (points < cost) return false;
+    points -= cost;
+    unlockedIds.add(id);
+    return true;
+  }
+
+  bool buyWardrobe(WardrobeItem item) {
+    if (points < item.cost) return false;
+    points -= item.cost;
+    wardrobeUnlocked.add(item.id);
+    return true;
+  }
+
   List<WardrobeItem> completeExperience(Experience exp) {
     addPoints(exp.difficulty.points);
     completedIds.add(exp.id);
+
+    // 이번 주 홈 경험 완료 추적
+    if (exp.id == homeWeekFitId || exp.id == homeWeekDareId) {
+      homeWeekCompletedIds.add(exp.id);
+    }
+
     categoryCounts[exp.category] = (categoryCounts[exp.category] ?? 0) + 1;
 
     final newlyUnlocked = <WardrobeItem>[];

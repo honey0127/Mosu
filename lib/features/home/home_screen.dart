@@ -5,102 +5,178 @@ import '../../models/app_state.dart';
 import '../../services/auth_service.dart';
 import '../experience/verify_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  // ── [수정] 프로필 기반 경험 추천 ─────────────────────────────────────────
-  /// 사용자의 MBTI, 취미, 나이를 기반으로 Fit / Dare 경험 한 쌍 선택
-  (Experience, Experience) _pickPair() {
-    final userId = AuthService.currentUserId;
-    final profile = userId != null ? AuthService.getProfile(userId) : null;
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-    if (profile == null) {
-      // 프로필 없으면 기본값
-      final fit = allExperiences.firstWhere((e) => e.isFit);
-      final dare = allExperiences.firstWhere((e) => !e.isFit);
-      return (fit, dare);
+class _HomeScreenState extends State<HomeScreen> {
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  // ── 주간 경험 추천 (완료된 경험 제외, 1주마다 자동 갱신) ───────────────────
+  (Experience?, Experience?) _pickPair() {
+    final state = AppState.i;
+    final userId = AuthService.currentUserId ?? '';
+    final currentWeek = AuthService.getWeekNumber(userId);
+
+    // 주차가 바뀌었거나 재선택 예약(-1)이면 새 페어 배정
+    if (state.homeWeekNumber != currentWeek) {
+      final exclude = Set<String>.from(state.homeWeekExcluded);
+      final (newFit, newDare) = _selectWeeklyPair(userId, currentWeek, exclude: exclude);
+      state.setWeeklyPair(
+        weekNum: currentWeek,
+        fitId: newFit?.id,
+        dareId: newDare?.id,
+      );
+      state.homeWeekExcluded = {}; // 선택 완료 후 초기화
     }
 
-    // ── 프로필 → 선호 키워드 변환 ──────────────────────────────────────────
-    final preferredKeywords = <String>{};
+    // 이번 주 완료 + 전체 완료 경험은 숨김
+    final weekDone = state.homeWeekCompletedIds;
+    final allDone  = state.completedIds.toSet();
 
-    // MBTI 내향/외향
+    Experience? fitExp;
+    final fitId = state.homeWeekFitId;
+    if (fitId != null && !weekDone.contains(fitId) && !allDone.contains(fitId)) {
+      final found = allExperiences.where((e) => e.id == fitId);
+      if (found.isNotEmpty) fitExp = found.first;
+    }
+
+    Experience? dareExp;
+    final dareId = state.homeWeekDareId;
+    if (dareId != null && !weekDone.contains(dareId) && !allDone.contains(dareId)) {
+      final found = allExperiences.where((e) => e.id == dareId);
+      if (found.isNotEmpty) dareExp = found.first;
+    }
+
+    return (fitExp, dareExp);
+  }
+
+  /// 난이도별 보너스 점수 — 쉬움 우선이되 키워드 매칭이 충분하면 보통/어려움도 추천
+  static int _diffBonus(Difficulty d) => switch (d) {
+    Difficulty.easy   => 3,
+    Difficulty.medium => 2,
+    Difficulty.hard   => 1,
+  };
+
+  /// 온보딩 프로필 + 키워드 선택에서 선호 키워드 Set 구성
+  static Set<String> _buildPreferred(String userId) {
+    final preferred = <String>{};
+
+    // 1) 사용자가 직접 선택한 키워드 (keyword_selection_screen)
+    preferred.addAll(AuthService.getUserKeywords(userId));
+
+    // 2) 온보딩 프로필에서 유추한 키워드
+    final profile = AuthService.getProfile(userId);
+    if (profile == null) return preferred;
+
     if (profile.isIntrovert) {
-      preferredKeywords.add('혼자');
+      preferred.add('혼자');
     } else {
-      preferredKeywords.add('함께');
+      preferred.add('함께');
     }
-
-    // MBTI 직관형(N)이면 새로운 것, 감각형(S)이면 안정적인 것
     if (profile.isIntuitive) {
-      preferredKeywords.addAll(['낯선 곳', '처음 해보는', '도전적']);
+      preferred.addAll(['낯선 곳', '처음 해보는', '도전적']);
     } else {
-      preferredKeywords.addAll(['느린', '조용한']);
+      preferred.addAll(['느린', '조용한']);
     }
-
-    // 나이대별 선호
     if (profile.age < 25) {
-      preferredKeywords.addAll(['두근두근', '도전적', '함께']);
+      preferred.addAll(['두근두근', '도전적', '함께']);
     } else if (profile.age < 35) {
-      preferredKeywords.addAll(['새벽', '몸쓰는', '낯선 곳']);
+      preferred.addAll(['새벽', '몸쓰는', '낯선 곳']);
     } else {
-      preferredKeywords.addAll(['느린', '조용한', '자연']);
+      preferred.addAll(['느린', '조용한', '자연']);
     }
-
-    // 취미 → 키워드 매핑
     for (final hobby in profile.hobbies) {
       final h = hobby.toLowerCase();
       if (h.contains('운동') || h.contains('헬스') || h.contains('달리기')) {
-        preferredKeywords.addAll(['몸쓰는', '새벽']);
+        preferred.addAll(['몸쓰는', '새벽']);
       } else if (h.contains('요리') || h.contains('베이킹')) {
-        preferredKeywords.addAll(['만들기', '먹는']);
+        preferred.addAll(['만들기', '먹는']);
       } else if (h.contains('독서') || h.contains('책')) {
-        preferredKeywords.addAll(['조용한', '혼자', '느린']);
+        preferred.addAll(['조용한', '혼자', '느린']);
       } else if (h.contains('여행') || h.contains('산책')) {
-        preferredKeywords.addAll(['낯선 곳', '걷기', '자연']);
+        preferred.addAll(['낯선 곳', '걷기', '자연']);
       } else if (h.contains('음악') || h.contains('노래') || h.contains('악기')) {
-        preferredKeywords.addAll(['감성적', '혼자']);
+        preferred.addAll(['감성적', '혼자']);
       } else if (h.contains('그림') || h.contains('그래픽') || h.contains('디자인')) {
-        preferredKeywords.addAll(['만들기', '감성적']);
+        preferred.addAll(['만들기', '감성적']);
       } else if (h.contains('사진') || h.contains('영상')) {
-        preferredKeywords.addAll(['감성적', '낯선 곳']);
+        preferred.addAll(['감성적', '낯선 곳']);
       } else if (h.contains('게임')) {
-        preferredKeywords.addAll(['혼자', '새벽']);
+        preferred.addAll(['혼자', '새벽']);
       } else if (h.contains('등산') || h.contains('클라이밍')) {
-        preferredKeywords.addAll(['몸쓰는', '자연', '도전적']);
+        preferred.addAll(['몸쓰는', '자연', '도전적']);
       }
     }
+    return preferred;
+  }
 
-    // ── Fit 선택: 선호 키워드 오버랩 최대 ───────────────────────────────
-    Experience? fit;
-    int fitScore = -1;
+  /// 상위 후보 중 weekNum으로 로테이션하여 매주 다른 경험을 제공
+  static Experience? _pickTop(List<(Experience, int)> scored, int weekNum) {
+    if (scored.isEmpty) return null;
+    // 최고 점수에서 1점 이내를 "동급 상위"로 묶어 로테이션
+    final best = scored.first.$2;
+    final topTier = scored.where((e) => e.$2 >= best - 1).toList();
+    return topTier[weekNum % topTier.length].$1;
+  }
 
-    for (final exp in allExperiences.where((e) => e.isFit)) {
-      final overlap =
-          exp.matchedKeywords.where(preferredKeywords.contains).length;
-      if (overlap > fitScore) {
-        fitScore = overlap;
-        fit = exp;
-      }
+  /// 주차별 맞춤/도전 경험 쌍 선택
+  /// - 맞춤(Fit): 키워드 겹침 많음 + 쉬움 우선
+  /// - 도전(Dare): 키워드 겹침 적음(의외) + 쉬움 우선
+  (Experience?, Experience?) _selectWeeklyPair(
+    String userId,
+    int weekNum, {
+    Set<String> exclude = const {},
+  }) {
+    // 명시적 제외 + 전체 완료 경험은 후보에서 빼기
+    final allDone = AppState.i.completedIds.toSet();
+    final skip = {...exclude, ...allDone};
+
+    final fitCandidates = allExperiences
+        .where((e) => e.isFit && !skip.contains(e.id))
+        .toList();
+    final dareCandidates = allExperiences
+        .where((e) => !e.isFit && !skip.contains(e.id))
+        .toList();
+
+    if (fitCandidates.isEmpty && dareCandidates.isEmpty) return (null, null);
+
+    final preferred = _buildPreferred(userId);
+
+    // 프로필도 키워드도 없으면 쉬움 우선 단순 로테이션
+    if (preferred.isEmpty) {
+      final easyFit  = fitCandidates.where((e) => e.difficulty == Difficulty.easy).toList();
+      final easyDare = dareCandidates.where((e) => e.difficulty == Difficulty.easy).toList();
+      return (
+        (easyFit.isNotEmpty ? easyFit : fitCandidates)[weekNum % (easyFit.isNotEmpty ? easyFit.length : fitCandidates.length)],
+        (easyDare.isNotEmpty ? easyDare : dareCandidates)[weekNum % (easyDare.isNotEmpty ? easyDare.length : dareCandidates.length)],
+      );
     }
 
-    // ── Dare 선택: 선호 키워드 오버랩 최소 (의외의 경험) ────────────────
-    Experience? dare;
-    int dareScore = 999;
+    // ── 맞춤(Fit): 키워드 겹침 × 2 + 난이도 보너스 (높을수록 좋음) ──────────
+    final scoredFit = fitCandidates
+        .map((e) {
+          final overlap = e.matchedKeywords.where(preferred.contains).length;
+          return (e, overlap * 2 + _diffBonus(e.difficulty));
+        })
+        .toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
 
-    for (final exp in allExperiences.where((e) => !e.isFit)) {
-      final overlap =
-          exp.matchedKeywords.where(preferredKeywords.contains).length;
-      if (overlap < dareScore) {
-        dareScore = overlap;
-        dare = exp;
-      }
-    }
+    // ── 도전(Dare): 겹침 적을수록 좋음 → 역산 + 난이도 보너스 ───────────────
+    final scoredDare = dareCandidates
+        .map((e) {
+          final overlap = e.matchedKeywords.where(preferred.contains).length;
+          return (e, -overlap * 2 + _diffBonus(e.difficulty));
+        })
+        .toList()
+      ..sort((a, b) => b.$2.compareTo(a.$2));
 
-    return (
-    fit ?? allExperiences.firstWhere((e) => e.isFit),
-    dare ?? allExperiences.firstWhere((e) => !e.isFit),
-    );
+    return (_pickTop(scoredFit, weekNum), _pickTop(scoredDare, weekNum));
   }
 
   @override
@@ -108,6 +184,10 @@ class HomeScreen extends StatelessWidget {
     final state = AppState.i;
     final userId = AuthService.currentUserId ?? '';
     final (fitExp, dareExp) = _pickPair();
+    final recCards = [
+      if (fitExp != null) (fitExp, true),
+      if (dareExp != null) (dareExp, false),
+    ];
     final completed =
     allExperiences.where((e) => state.completedIds.contains(e.id)).toList();
 
@@ -202,18 +282,48 @@ class HomeScreen extends StatelessWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // ── 경험 카드 2개 ─────────────────────────────────────────────
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList.separated(
-                itemCount: 2,
-                separatorBuilder: (_, _) => const SizedBox(height: 16),
-                itemBuilder: (_, i) => _ExpCard(
-                  exp: i == 0 ? fitExp : dareExp,
-                  isFit: i == 0,
+            // ── 경험 카드 (완료된 경험 제외) ─────────────────────────────
+            if (recCards.isNotEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList.separated(
+                  itemCount: recCards.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 16),
+                  itemBuilder: (_, i) => _ExpCard(
+                    exp: recCards[i].$1,
+                    isFit: recCards[i].$2,
+                    onReturn: _refresh,
+                  ),
+                ),
+              )
+            else
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade100),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('🎉', style: TextStyle(fontSize: 40)),
+                        const SizedBox(height: 12),
+                        const Text('모든 경험을 완료했어요!',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 6),
+                        Text('정말 대단해요. 새로운 경험이 곧 추가될 예정이에요.',
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey.shade500),
+                            textAlign: TextAlign.center),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 28)),
 
@@ -277,7 +387,8 @@ class HomeScreen extends StatelessWidget {
 class _ExpCard extends StatelessWidget {
   final Experience exp;
   final bool isFit;
-  const _ExpCard({required this.exp, required this.isFit});
+  final VoidCallback? onReturn;
+  const _ExpCard({required this.exp, required this.isFit, this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -376,11 +487,13 @@ class _ExpCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => VerifyScreen(exp: exp)),
-              ),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => VerifyScreen(exp: exp)),
+                );
+                onReturn?.call();
+              },
               child: const Text('이 경험 선택하기',
                   style: TextStyle(fontWeight: FontWeight.w600)),
             ),
