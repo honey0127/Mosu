@@ -27,6 +27,9 @@ class AppState {
   /// 현재 선택된 동물 객체
   Animal? get selectedAnimal => animalById(selectedAnimalId);
 
+  /// 동물 선택 (저장)
+  void selectAnimal(String id) => selectedAnimalId = id;
+
   /// 잠금 해제된 캐릭터/방 아이템 id 집합 (실 경험을 통해서만 해제됨)
   Set<String> wardrobeUnlocked = {};
 
@@ -105,10 +108,6 @@ class AppState {
     points -= item.cost;
     wardrobeUnlocked.add(item.id);
     return true;
-  }
-
-  void selectAnimal(String id) {
-    selectedAnimalId = id;
   }
 
   /// 캐릭터 슬롯 장착 / 해제 (id == null 이면 해제)
