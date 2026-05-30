@@ -245,13 +245,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                               style: const TextStyle(
                                   fontWeight: FontWeight.w700, fontSize: 15)),
                           const SizedBox(height: 3),
-                          Text(
-                            '+${exp.difficulty.points}P 획득 예정',
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF5A9A4A)),
-                          ),
+
                         ],
                       ),
                     ),
@@ -311,7 +305,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         const SizedBox(height: 4),
                         Text('카메라 촬영 또는 갤러리에서 선택',
                             style: TextStyle(
-                                color: Colors.grey.shade400,
+                                color: Colors.grey.shade500,
                                 fontSize: 12)),
                         const SizedBox(height: 2),
                         Text('위치 · 시간이 자동으로 기록돼요',
@@ -462,7 +456,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   child: Text(
                     _completed
                         ? '완료됨! ✅'
-                        : '완료하고 +${exp.difficulty.points}P 받기',
+                        : '경험 완료하기 ✅',
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w600),
                   ),
@@ -512,29 +506,7 @@ class _RewardDialog extends StatelessWidget {
                 textAlign: TextAlign.center),
             const SizedBox(height: 20),
 
-            // ── 포인트 배지 ──────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F3E3),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('⭐', style: TextStyle(fontSize: 26)),
-                  const SizedBox(width: 10),
-                  Text('+${exp.difficulty.points}P 획득!',
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF5A9A4A))),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text('현재 포인트: ${AppState.i.points}P',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+
             // ── AI 생성 소품 보상 ─────────────────────────────────
             if (newDecoItem != null) ...[
               const SizedBox(height: 20),

@@ -4,6 +4,7 @@ import 'package:avatar_maker/avatar_maker.dart';
 import '../../models/experience.dart';
 import '../../models/app_state.dart';
 import '../../models/wardrobe_item.dart';
+import '../../models/deco_item.dart';
 
 // ── 팔레트 ────────────────────────────────────────────────────────────────────
 const _primary  = Color(0xFF7DB879);
@@ -56,10 +57,10 @@ class _CharacterRoomScreenState extends State<CharacterRoomScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _ACHeader(points: state.points),
+            const _ACHeader(),
 
             // 미니 캐릭터/방 상태 스트립
-            _MiniPreviewStrip(state: state),
+            _MiniPreviewStrip(state: state, avatarController: _avatarController),
             const SizedBox(height: 6),
 
             // 탭 바 (캐릭터, 방)
@@ -79,7 +80,7 @@ class _CharacterRoomScreenState extends State<CharacterRoomScreen> {
                 index: _tabIndex,
                 children: [
                   _CharacterEditTab(avatarController: _avatarController),
-                  _RoomEditTab(onUpdate: () => setState(() {})),
+                  _RoomEditTab(onUpdate: () => setState(() {}), avatarController: _avatarController),
                 ],
               ),
             ),
@@ -139,8 +140,7 @@ Color _categoryColor(ExperienceCategory cat) {
 //                              헤더
 // ══════════════════════════════════════════════════════════════════════════════
 class _ACHeader extends StatelessWidget {
-  final int points;
-  const _ACHeader({required this.points});
+  const _ACHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -162,23 +162,6 @@ class _ACHeader extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          ACUICard(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('⭐', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 5),
-                  Text('${points}P',
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: _primary2)),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -659,7 +642,8 @@ class _CharacterEditTabState extends State<_CharacterEditTab> {
 // ══════════════════════════════════════════════════════════════════════════════
 class _RoomEditTab extends StatefulWidget {
   final VoidCallback onUpdate;
-  const _RoomEditTab({required this.onUpdate});
+  final AvatarMakerController avatarController;
+  const _RoomEditTab({required this.onUpdate, required this.avatarController});
 
   @override
   State<_RoomEditTab> createState() => _RoomEditTabState();
@@ -668,24 +652,38 @@ class _RoomEditTab extends StatefulWidget {
 class _RoomEditTabState extends State<_RoomEditTab> {
   @override
   Widget build(BuildContext context) {
-    final state = AppState.i;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: _RoomPreviewCard(state: state),
-        ),
+        // 인터랙티브 방 캔버스
         Expanded(
-          child: _WardrobeGrid(
-            dimension: SelfDimension.internal,
-            slots: roomSlots,
-            slotLabels: roomSlotLabels,
-            equippedMap: state.roomEquipped,
-            onEquip: (slot, id) => setState(() {
-              final cur = state.roomEquipped[slot];
-              state.equipRoom(slot, cur == id ? null : id);
-              widget.onUpdate();
-            }),
+          flex: 5,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: _InteractiveRoomCanvas(
+                avatarController: widget.avatarController,
+                onChanged: () => setState(() {}),
+              ),
+            ),
+          ),
+        ),
+        // 소품 팔레트
+        Container(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: _border)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Text('소품 추가하기',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _textSub)),
+              ),
+              _RoomItemPalette(onChanged: () => setState(() {})),
+              const SizedBox(height: 8),
+            ],
           ),
         ),
       ],
@@ -696,7 +694,8 @@ class _RoomEditTabState extends State<_RoomEditTab> {
 // ── 방 미니 미리보기 카드 ───────────────────────────────────────────────────
 class _RoomPreviewCard extends StatelessWidget {
   final AppState state;
-  const _RoomPreviewCard({required this.state});
+  final AvatarMakerController avatarController;
+  const _RoomPreviewCard({required this.state, required this.avatarController});
 
   @override
   Widget build(BuildContext context) {
@@ -791,6 +790,16 @@ class _RoomPreviewCard extends StatelessWidget {
                   child: Text(floorEmoji,
                       style: const TextStyle(fontSize: 24)),
                 ),
+              // 캐릭터 아바타 (바닥 중앙)
+              Positioned(
+                bottom: 0, left: 0, right: 0,
+                child: Center(
+                  child: SizedBox(
+                    width: 56, height: 70,
+                    child: AvatarMakerAvatar(controller: avatarController),
+                  ),
+                ),
+              ),
               // 현재 채워진 슬롯 수
               Positioned(
                 top: 8, left: 0, right: 0,
@@ -958,7 +967,8 @@ class _ItemCell extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 class _MiniPreviewStrip extends StatelessWidget {
   final AppState state;
-  const _MiniPreviewStrip({required this.state});
+  final AvatarMakerController avatarController;
+  const _MiniPreviewStrip({required this.state, required this.avatarController});
 
   @override
   Widget build(BuildContext context) {
@@ -974,11 +984,9 @@ class _MiniPreviewStrip extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(color: _bgSoft, borderRadius: BorderRadius.circular(12)),
-            alignment: Alignment.center,
-            child: Text(animal?.emoji ?? '🐾', style: const TextStyle(fontSize: 26)),
+          SizedBox(
+            width: 48, height: 48,
+            child: AvatarMakerAvatar(controller: avatarController),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -988,7 +996,7 @@ class _MiniPreviewStrip extends StatelessWidget {
               children: [
                 Text(animal?.name ?? '내 캐릭터',
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                Text('Lv.${state.level} · ${state.points}P',
+                Text('Lv.${state.level}',
                     style: const TextStyle(fontSize: 11, color: _textSub)),
               ],
             ),
@@ -1294,6 +1302,254 @@ class _EmptySlotPill extends StatelessWidget {
         border: Border.all(color: _border),
       ),
       child: Text(label, style: const TextStyle(fontSize: 10, color: _textSub)),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  인터랙티브 방 캔버스 — 드래그로 소품 배치
+// ══════════════════════════════════════════════════════════════════════════════
+class _InteractiveRoomCanvas extends StatefulWidget {
+  final AvatarMakerController avatarController;
+  final VoidCallback onChanged;
+  const _InteractiveRoomCanvas({required this.avatarController, required this.onChanged});
+
+  @override
+  State<_InteractiveRoomCanvas> createState() => _InteractiveRoomCanvasState();
+}
+
+class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
+  @override
+  Widget build(BuildContext context) {
+    final state = AppState.i;
+    final placed = state.placedRoomItemIds
+        .map((id) => state.aiDecoItems.where((it) => it.id == id).firstOrNull)
+        .whereType<DecoItem>()
+        .toList();
+
+    return LayoutBuilder(builder: (ctx, constraints) {
+      final w = constraints.maxWidth;
+      final h = constraints.maxHeight;
+      return Container(
+        decoration: const BoxDecoration(color: _wallDefault),
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            // 바닥
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              height: h * 0.40,
+              child: Container(color: _floorDefault),
+            ),
+            // 바닥/벽 경계선
+            Positioned(
+              bottom: h * 0.40, left: 0, right: 0,
+              child: Container(height: 2, color: Colors.black12),
+            ),
+            // 캐릭터 (바닥 중앙)
+            Positioned(
+              bottom: h * 0.36,
+              left: 0, right: 0,
+              child: Center(
+                child: SizedBox(
+                  width: 64, height: 84,
+                  child: AvatarMakerAvatar(controller: widget.avatarController),
+                ),
+              ),
+            ),
+            // 배치된 소품들 (드래그 가능)
+            for (final item in placed)
+              _DraggableRoomItem(
+                key: ValueKey(item.id),
+                item: item,
+                canvasWidth: w,
+                canvasHeight: h,
+                position: state.roomItemPositions[item.id] ?? const Offset(0.15, 0.3),
+                onMoved: (pos) {
+                  state.moveRoomItem(item.id, pos);
+                  widget.onChanged();
+                },
+                onRemove: () {
+                  state.removeRoomItem(item.id);
+                  setState(() {});
+                  widget.onChanged();
+                },
+              ),
+            // 빈 상태 안내
+            if (placed.isEmpty)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text('🏠', style: TextStyle(fontSize: 40)),
+                    SizedBox(height: 8),
+                    Text('아래 소품을 탭해서 방에 배치해보세요',
+                        style: TextStyle(fontSize: 12, color: _textSub)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  드래그 가능한 소품 아이템
+// ══════════════════════════════════════════════════════════════════════════════
+class _DraggableRoomItem extends StatefulWidget {
+  final DecoItem item;
+  final double canvasWidth;
+  final double canvasHeight;
+  final Offset position;
+  final void Function(Offset) onMoved;
+  final VoidCallback onRemove;
+
+  const _DraggableRoomItem({
+    super.key,
+    required this.item,
+    required this.canvasWidth,
+    required this.canvasHeight,
+    required this.position,
+    required this.onMoved,
+    required this.onRemove,
+  });
+
+  @override
+  State<_DraggableRoomItem> createState() => _DraggableRoomItemState();
+}
+
+class _DraggableRoomItemState extends State<_DraggableRoomItem> {
+  late Offset _pos;
+  bool _dragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pos = widget.position;
+  }
+
+  @override
+  void didUpdateWidget(_DraggableRoomItem old) {
+    super.didUpdateWidget(old);
+    if (!_dragging) _pos = widget.position;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const itemSize = 48.0;
+    final x = (_pos.dx * widget.canvasWidth).clamp(0.0, widget.canvasWidth - itemSize);
+    final y = (_pos.dy * widget.canvasHeight).clamp(0.0, widget.canvasHeight - itemSize);
+
+    return Positioned(
+      left: x, top: y,
+      child: GestureDetector(
+        onPanStart: (_) => setState(() => _dragging = true),
+        onPanUpdate: (d) {
+          setState(() {
+            final nx = (_pos.dx + d.delta.dx / widget.canvasWidth).clamp(0.0, 1.0);
+            final ny = (_pos.dy + d.delta.dy / widget.canvasHeight).clamp(0.0, 1.0);
+            _pos = Offset(nx, ny);
+          });
+        },
+        onPanEnd: (_) {
+          setState(() => _dragging = false);
+          widget.onMoved(_pos);
+        },
+        onLongPress: widget.onRemove,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          width: itemSize, height: itemSize,
+          decoration: BoxDecoration(
+            color: _dragging ? Colors.white.withOpacity(0.95) : Colors.white.withOpacity(0.75),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _dragging ? _primary : _border.withOpacity(0.5),
+              width: _dragging ? 2 : 1,
+            ),
+            boxShadow: _dragging
+                ? [BoxShadow(color: _primary.withOpacity(0.3), blurRadius: 12, spreadRadius: 1)]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(widget.item.emoji, style: const TextStyle(fontSize: 28)),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  소품 팔레트 — 탭으로 방에 추가/제거
+// ══════════════════════════════════════════════════════════════════════════════
+class _RoomItemPalette extends StatelessWidget {
+  final VoidCallback onChanged;
+  const _RoomItemPalette({required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppState.i;
+    final items = state.aiDecoItems
+        .where((it) => it.dimension == SelfDimension.internal)
+        .toList();
+
+    if (items.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
+        child: Text('경험을 완료하면 방 소품이 생겨요 ✨',
+            style: TextStyle(color: _textSub, fontSize: 12)),
+      );
+    }
+
+    return SizedBox(
+      height: 82,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final item = items[i];
+          final placed = state.placedRoomItemIds.contains(item.id);
+          return GestureDetector(
+            onTap: () {
+              if (placed) {
+                state.removeRoomItem(item.id);
+              } else {
+                state.placeRoomItem(item.id);
+              }
+              onChanged();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.only(right: 10),
+              width: 66,
+              decoration: BoxDecoration(
+                color: placed ? _bgSoft : _bgCard,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: placed ? _primary : _border, width: placed ? 2 : 1),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(item.emoji, style: const TextStyle(fontSize: 26)),
+                  const SizedBox(height: 3),
+                  Text(item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: placed ? _primary2 : _textSub,
+                          fontWeight: placed ? FontWeight.w700 : FontWeight.normal)),
+                  if (placed)
+                    const Text('배치됨', style: TextStyle(fontSize: 8, color: _primary)),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

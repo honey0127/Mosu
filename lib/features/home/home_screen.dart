@@ -225,27 +225,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7DB879)
-                                .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              const Text('⭐',
-                                  style: TextStyle(fontSize: 16)),
-                              const SizedBox(width: 6),
-                              Text('${state.points}P',
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF5A9A4A))),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -337,11 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: '완료 경험',
                         value: '${state.completedIds.length}개',
                         emoji: '✅'),
-                    const SizedBox(width: 12),
-                    _StatCard(
-                        label: '총 포인트',
-                        value: '${state.totalEarned}P',
-                        emoji: '⭐'),
+
                     const SizedBox(width: 12),
                     _StatCard(
                         label: '잠금 해제',

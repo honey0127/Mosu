@@ -1,6 +1,5 @@
 import 'experience.dart';
 
-// ─────────────────────────── DecoItem ────────────────────────────────────────
 class DecoItem {
   final String id;
   final String name;
@@ -9,7 +8,6 @@ class DecoItem {
   final String slot;
   final String hint;
   final bool isAiGenerated;
-  // external = 캐릭터 코디, internal = 방 소품
   final SelfDimension dimension;
 
   const DecoItem({
