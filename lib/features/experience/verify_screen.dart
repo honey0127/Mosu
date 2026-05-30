@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/experience.dart';
@@ -571,11 +571,6 @@ class _RewardDialog extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text('현재 보유 포인트: ${AppState.i.points}P',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-
-
               // ── AI 생성 소품 보상 ─────────────────────────────────
               if (newDecoItem != null) ...[
                 const SizedBox(height: 20),
@@ -612,15 +607,11 @@ class _RewardDialog extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(newDecoItem!.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700)),
                                 const SizedBox(height: 2),
                                 Text(newDecoItem!.hint,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey.shade500)),
