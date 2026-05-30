@@ -275,11 +275,16 @@ class CommunityRepository {
         .toList();
   }
 
-  /// 인증 승인/거절 (방장·관리자만).
-  Future<void> reviewVerification(String id, {required bool approve}) =>
+  /// 인증 승인/거절 (방장·관리자만). 거절 시 reason 전달 가능.
+  Future<void> reviewVerification(
+    String id, {
+    required bool approve,
+    String? reason,
+  }) =>
       _rpcString('review_verification', {
         'p_id': id,
         'p_action': approve ? 'approve' : 'reject',
+        if (!approve && reason != null && reason.isNotEmpty) 'p_reason': reason,
       });
 
   /// 내 인증 전체 (캘린더용).
@@ -588,6 +593,7 @@ class Verification {
   final DateTime createdAt;
   final String? handle;
   final String? displayName;
+  final String? rejectReason;
 
   const Verification({
     required this.id,
@@ -600,6 +606,7 @@ class Verification {
     required this.createdAt,
     this.handle,
     this.displayName,
+    this.rejectReason,
   });
 
   bool get isPending => status == 'pending';
@@ -618,6 +625,7 @@ class Verification {
     createdAt: _parseDate(m['created_at'])!,
     handle: m['handle'] as String?,
     displayName: m['display_name'] as String?,
+    rejectReason: m['reject_reason'] as String?,
   );
 }
 

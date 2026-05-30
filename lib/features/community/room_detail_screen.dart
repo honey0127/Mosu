@@ -188,8 +188,16 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
 
   // ── 승인/거절 ────────────────────────────────────────────────────────────────
   Future<void> _review(String id, bool approve) async {
+    String? reason;
+    if (!approve) {
+      reason = await showDialog<String>(
+        context: context,
+        builder: (_) => const _RejectReasonDialog(),
+      );
+      if (reason == null) return; // 취소
+    }
     try {
-      await _repo.reviewVerification(id, approve: approve);
+      await _repo.reviewVerification(id, approve: approve, reason: reason);
       _snack(approve ? '인증을 승인했어요.' : '인증을 거절했어요.');
       _reload();
     } on CommunityException catch (e) {
@@ -517,6 +525,21 @@ class _VerificationCard extends StatelessWidget {
                   _fmtDate(v.createdAt),
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                 ),
+                if (v.isRejected && v.rejectReason != null && v.rejectReason!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '거절 사유: ${v.rejectReason}',
+                      style: TextStyle(fontSize: 12, color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
                 if (showActions) ...[
                   const SizedBox(height: 12),
                   Row(
@@ -697,28 +720,34 @@ class _CaptionDialogState extends State<_CaptionDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('인증 올리기'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              File(widget.imagePath),
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
+      insetPadding: EdgeInsets.fromLTRB(
+        24, 24, 24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(widget.imagePath),
+                height: 140,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _caption,
-            maxLength: 100,
-            decoration: const InputDecoration(
-              hintText: '한마디 남기기 (선택)',
-              border: OutlineInputBorder(),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _caption,
+              maxLength: 100,
+              decoration: const InputDecoration(
+                hintText: '한마디 남기기 (선택)',
+                border: OutlineInputBorder(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -728,6 +757,56 @@ class _CaptionDialogState extends State<_CaptionDialog> {
         FilledButton(
           onPressed: () => Navigator.pop(context, _caption.text),
           child: const Text('제출'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────── 거절 사유 다이얼로그 ─────────────────────────────
+class _RejectReasonDialog extends StatefulWidget {
+  const _RejectReasonDialog();
+
+  @override
+  State<_RejectReasonDialog> createState() => _RejectReasonDialogState();
+}
+
+class _RejectReasonDialogState extends State<_RejectReasonDialog> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('거절 사유'),
+      insetPadding: EdgeInsets.fromLTRB(
+        24, 24, 24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      content: TextField(
+        controller: _ctrl,
+        autofocus: true,
+        maxLength: 100,
+        maxLines: 3,
+        decoration: const InputDecoration(
+          hintText: '사유를 입력하세요 (선택)',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: Colors.red.shade400),
+          onPressed: () => Navigator.pop(context, _ctrl.text),
+          child: const Text('거절'),
         ),
       ],
     );
