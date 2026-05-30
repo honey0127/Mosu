@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/experience.dart';
@@ -181,7 +181,10 @@ class _VerifyScreenState extends State<VerifyScreen> {
   // ── 완료 처리 ───────────────────────────────────────────────
   Future<void> _complete() async {
     if (_completed) return;
+    final oldLevel = AppState.i.level;
     final newItems = AppState.i.completeExperience(widget.exp);
+    final newLevel = AppState.i.level;
+    if (newLevel > oldLevel) AppState.i.pendingLevelUp = newLevel;
     setState(() => _completed = true);
 
     // AI 소품 생성 (비동기)
@@ -198,13 +201,18 @@ class _VerifyScreenState extends State<VerifyScreen> {
         exp: widget.exp,
         newItems: newItems,
         newDecoItem: decoItem,
-        onClose: () {
+        onYes: () {
+          AppState.i.markForRefresh(widget.exp.id);
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (_) => const MainShell(initialIndex: 3),
+              builder: (_) => const MainShell(initialIndex: 0),
             ),
             (route) => false,
           );
+        },
+        onNo: () {
+          Navigator.of(context).pop();
+          if (mounted) Navigator.of(context).pop();
         },
       ),
     );
@@ -508,13 +516,15 @@ class _RewardDialog extends StatelessWidget {
   final Experience exp;
   final List<WardrobeItem> newItems;
   final DecoItem? newDecoItem;
-  final VoidCallback onClose;
+  final VoidCallback onYes;
+  final VoidCallback onNo;
 
   const _RewardDialog({
     required this.exp,
     required this.newItems,
     this.newDecoItem,
-    required this.onClose,
+    required this.onYes,
+    required this.onNo,
   });
 
   @override
@@ -561,11 +571,6 @@ class _RewardDialog extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text('현재 보유 포인트: ${AppState.i.points}P',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-
-
               // ── AI 생성 소품 보상 ─────────────────────────────────
               if (newDecoItem != null) ...[
                 const SizedBox(height: 20),
@@ -608,19 +613,21 @@ class _RewardDialog extends StatelessWidget {
                               : Text(newDecoItem!.emoji,
                                   style: const TextStyle(fontSize: 36)),
                           const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(newDecoItem!.name,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text(newDecoItem!.hint,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500)),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(newDecoItem!.name,
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 2),
+                                Text(newDecoItem!.hint,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500)),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -662,10 +669,14 @@ class _RewardDialog extends StatelessWidget {
                                 Text(item.emoji,
                                     style: const TextStyle(fontSize: 22)),
                                 const SizedBox(width: 8),
-                                Text(item.name,
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600)),
+                                Flexible(
+                                  child: Text(item.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600)),
+                                ),
                               ],
                             ),
                           )),
@@ -676,21 +687,48 @@ class _RewardDialog extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // ── 확인 버튼 ─────────────────────────────────────────
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF7DB879),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+              const Text(
+                '새로운 경험을 추가하시겠습니까?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        onPressed: onNo,
+                        child: const Text('아니오',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87)),
+                      ),
+                    ),
                   ),
-                  onPressed: onClose,
-                  child: const Text('방 꾸미러 가기 →',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF7DB879),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: onYes,
+                        child: const Text('네',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
