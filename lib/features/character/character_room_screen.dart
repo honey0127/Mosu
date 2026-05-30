@@ -20,6 +20,74 @@ const _border   = Color(0xFFDDDDDD);
 const _wallDefault  = Color(0xFFF5EFE4);
 const _floorDefault = Color(0xFFDFCDB3);
 
+// ── 방 테마 ─────────────────────────────────────────────────────────────────
+class RoomTheme {
+  final String id;
+  final String name;
+  final String emoji;
+  final Color wall;       // 벽
+  final Color floor;      // 바닥
+  final Color frame;      // 창문/문/책상 테두리
+  final Color glass;      // 창문 유리
+  final Color door;       // 문 본체
+  final Color doorPanel;  // 문 패널 라인
+  final Color deskTop;    // 책상 상판
+  final Color deskLeg;    // 책상 다리
+  final Color knob;       // 문 손잡이
+  const RoomTheme({
+    required this.id,
+    required this.name,
+    required this.emoji,
+    required this.wall,
+    required this.floor,
+    required this.frame,
+    required this.glass,
+    required this.door,
+    required this.doorPanel,
+    required this.deskTop,
+    required this.deskLeg,
+    required this.knob,
+  });
+}
+
+const roomThemes = <RoomTheme>[
+  RoomTheme(
+    id: 'basic', name: '기본', emoji: '🏠',
+    wall: Color(0xFFF5EFE4), floor: Color(0xFFDFCDB3),
+    frame: Color(0xFF8B7355), glass: Color(0xFFB8DDEF),
+    door: Color(0xFFB58B5E), doorPanel: Color(0xFF7A5A38),
+    deskTop: Color(0xFFC9A878), deskLeg: Color(0xFF8B7355),
+    knob: Color(0xFFFFD54F),
+  ),
+  RoomTheme(
+    id: 'princess', name: '공주', emoji: '👑',
+    wall: Color(0xFFFBE4EF), floor: Color(0xFFF6CBDD),
+    frame: Color(0xFFD976A4), glass: Color(0xFFFFF0F6),
+    door: Color(0xFFF4A9C8), doorPanel: Color(0xFFD976A4),
+    deskTop: Color(0xFFF8C8DC), deskLeg: Color(0xFFD976A4),
+    knob: Color(0xFFFFD54F),
+  ),
+  RoomTheme(
+    id: 'modern', name: '모던', emoji: '🖤',
+    wall: Color(0xFFF7F7F7), floor: Color(0xFFD9D9D9),
+    frame: Color(0xFF1A1A1A), glass: Color(0xFFCDD8DE),
+    door: Color(0xFF2B2B2B), doorPanel: Color(0xFF5A5A5A),
+    deskTop: Color(0xFF222222), deskLeg: Color(0xFF111111),
+    knob: Color(0xFFBDBDBD),
+  ),
+  RoomTheme(
+    id: 'forest', name: '자연', emoji: '🌿',
+    wall: Color(0xFFE8F3E3), floor: Color(0xFFCBB995),
+    frame: Color(0xFF5A9A4A), glass: Color(0xFFC9EFD0),
+    door: Color(0xFF6FA86A), doorPanel: Color(0xFF4C7C46),
+    deskTop: Color(0xFFA7C8B5), deskLeg: Color(0xFF5A9A4A),
+    knob: Color(0xFF8B5E3C),
+  ),
+];
+
+RoomTheme roomThemeById(String id) =>
+    roomThemes.firstWhere((t) => t.id == id, orElse: () => roomThemes.first);
+
 // ══════════════════════════════════════════════════════════════════════════════
 class CharacterRoomScreen extends StatefulWidget {
   const CharacterRoomScreen({super.key});
@@ -690,11 +758,87 @@ class _RoomEditTabState extends State<_RoomEditTab> {
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _textSub)),
               ),
               _RoomItemPalette(onChanged: () => setState(() {})),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Text('방 테마 선택',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _textSub)),
+              ),
+              _ThemePickerRow(onChanged: () => setState(() {})),
               const SizedBox(height: 8),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  방 테마 선택 — 공주/모던/자연 등
+// ══════════════════════════════════════════════════════════════════════════════
+class _ThemePickerRow extends StatelessWidget {
+  final VoidCallback onChanged;
+  const _ThemePickerRow({required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppState.i;
+    return SizedBox(
+      height: 74,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        itemCount: roomThemes.length,
+        itemBuilder: (_, i) {
+          final t = roomThemes[i];
+          final selected = state.roomThemeId == t.id;
+          return GestureDetector(
+            onTap: () {
+              state.roomThemeId = t.id;
+              onChanged();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.only(right: 10),
+              width: 64,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? _bgSoft : _bgCard,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: selected ? _primary : _border,
+                    width: selected ? 2 : 1),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 벽/바닥 색상 미리보기
+                  Container(
+                    width: 34, height: 24,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: t.frame, width: 1.5),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [t.wall, t.floor],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${t.emoji} ${t.name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          color: selected ? _primary2 : _textSub)),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -1065,27 +1209,52 @@ class _InteractiveRoomCanvas extends StatefulWidget {
 }
 
 class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
+  String? _selectedId;
+
+  void _changeScale(String id, double delta) {
+    final state = AppState.i;
+    final cur = state.roomItemScales[id] ?? 1.0;
+    state.updateRoomItemScale(id, (cur + delta).clamp(0.5, 3.0));
+    widget.onChanged();
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = AppState.i;
+    final theme = roomThemeById(state.roomThemeId);
     final placed = state.placedRoomItemIds
         .map((id) => state.aiDecoItems.where((it) => it.id == id).firstOrNull)
         .whereType<DecoItem>()
         .toList();
 
+    // 선택된 아이템이 더 이상 배치돼 있지 않으면 선택 해제
+    if (_selectedId != null && !state.placedRoomItemIds.contains(_selectedId)) {
+      _selectedId = null;
+    }
+    final selectedItem =
+        placed.where((it) => it.id == _selectedId).firstOrNull;
+
     return LayoutBuilder(builder: (ctx, constraints) {
       final w = constraints.maxWidth;
       final h = constraints.maxHeight;
       return Container(
-        decoration: const BoxDecoration(color: _wallDefault),
+        decoration: BoxDecoration(color: theme.wall),
         child: Stack(
           clipBehavior: Clip.hardEdge,
           children: [
+            // 빈 공간 탭 → 선택 해제
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => setState(() => _selectedId = null),
+              ),
+            ),
             // 바닥
             Positioned(
               bottom: 0, left: 0, right: 0,
               height: h * 0.40,
-              child: Container(color: _floorDefault),
+              child: Container(color: theme.floor),
             ),
             // 바닥/벽 경계선
             Positioned(
@@ -1099,30 +1268,30 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
               Positioned(
                 left: w * 0.05,
                 bottom: h * 0.40 - 2,
-                child: _DoorFixture(width: w * 0.16, height: h * 0.42),
+                child: _DoorFixture(width: w * 0.16, height: h * 0.42, theme: theme),
               ),
             // 창문 (오른쪽 벽 상단)
             if (state.roomFixtures.contains('window'))
               Positioned(
                 top: h * 0.10,
                 right: w * 0.08,
-                child: _WindowFixture(width: w * 0.26, height: h * 0.26),
+                child: _WindowFixture(width: w * 0.26, height: h * 0.26, theme: theme),
               ),
             // 책상 (오른쪽 바닥)
             if (state.roomFixtures.contains('desk'))
               Positioned(
                 right: w * 0.07,
                 bottom: h * 0.06,
-                child: _DeskFixture(width: w * 0.30, height: h * 0.22),
+                child: _DeskFixture(width: w * 0.30, height: h * 0.22, theme: theme),
               ),
 
-            // 캐릭터 (바닥 중앙) — 더 크게
+            // 캐릭터 (바닥 중앙) — 중간 크기
             Positioned(
-              bottom: h * 0.32,
+              bottom: h * 0.30,
               left: 0, right: 0,
               child: Center(
                 child: SizedBox(
-                  width: 110, height: 150,
+                  width: 88, height: 118,
                   child: AvatarMakerAvatar(controller: widget.avatarController),
                 ),
               ),
@@ -1134,8 +1303,10 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
                 item: item,
                 canvasWidth: w,
                 canvasHeight: h,
+                isSelected: _selectedId == item.id,
                 position: state.roomItemPositions[item.id] ?? const Offset(0.15, 0.3),
                 scale: state.roomItemScales[item.id] ?? 1.0,
+                onSelect: () => setState(() => _selectedId = item.id),
                 onMoved: (pos) {
                   state.moveRoomItem(item.id, pos);
                   widget.onChanged();
@@ -1146,14 +1317,120 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
                 },
                 onRemove: () {
                   state.removeRoomItem(item.id);
-                  setState(() {});
+                  setState(() => _selectedId = null);
                   widget.onChanged();
                 },
+              ),
+
+            // ── 선택된 소품 크기 조절 바 ──────────────────────────────
+            if (selectedItem != null)
+              Positioned(
+                bottom: 8, left: 0, right: 0,
+                child: Center(
+                  child: _ItemSizeBar(
+                    name: selectedItem.name,
+                    scale: state.roomItemScales[selectedItem.id] ?? 1.0,
+                    onDecrease: () => _changeScale(selectedItem.id, -0.2),
+                    onIncrease: () => _changeScale(selectedItem.id, 0.2),
+                    onRemove: () {
+                      state.removeRoomItem(selectedItem.id);
+                      setState(() => _selectedId = null);
+                      widget.onChanged();
+                    },
+                  ),
+                ),
               ),
           ],
         ),
       );
     });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  선택된 소품 크기 조절 바
+// ══════════════════════════════════════════════════════════════════════════════
+class _ItemSizeBar extends StatelessWidget {
+  final String name;
+  final double scale;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+  final VoidCallback onRemove;
+  const _ItemSizeBar({
+    required this.name,
+    required this.scale,
+    required this.onDecrease,
+    required this.onIncrease,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _primary, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 80),
+            child: Text(name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, color: _textMain)),
+          ),
+          const SizedBox(width: 8),
+          _CircleBtn(icon: Icons.remove, onTap: onDecrease),
+          SizedBox(
+            width: 42,
+            child: Text('${(scale * 100).round()}%',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, color: _primary2)),
+          ),
+          _CircleBtn(icon: Icons.add, onTap: onIncrease),
+          const SizedBox(width: 6),
+          Container(width: 1, height: 18, color: _border),
+          const SizedBox(width: 6),
+          _CircleBtn(icon: Icons.delete_outline, onTap: onRemove, danger: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _CircleBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool danger;
+  const _CircleBtn({required this.icon, required this.onTap, this.danger = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 30, height: 30,
+        decoration: BoxDecoration(
+          color: danger ? const Color(0xFFFCE4E4) : _bgSoft,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon,
+            size: 18, color: danger ? const Color(0xFFD9534F) : _primary2),
+      ),
+    );
   }
 }
 
@@ -1166,6 +1443,8 @@ class _DraggableRoomItem extends StatefulWidget {
   final double canvasHeight;
   final Offset position;
   final double scale;
+  final bool isSelected;
+  final VoidCallback onSelect;
   final void Function(Offset) onMoved;
   final void Function(double) onScaleUpdate;
   final VoidCallback onRemove;
@@ -1177,6 +1456,8 @@ class _DraggableRoomItem extends StatefulWidget {
     required this.canvasHeight,
     required this.position,
     required this.scale,
+    required this.isSelected,
+    required this.onSelect,
     required this.onMoved,
     required this.onScaleUpdate,
     required this.onRemove,
@@ -1216,10 +1497,14 @@ class _DraggableRoomItemState extends State<_DraggableRoomItem> {
     final x = (_pos.dx * widget.canvasWidth).clamp(0.0, widget.canvasWidth - itemSize);
     final y = (_pos.dy * widget.canvasHeight).clamp(0.0, widget.canvasHeight - itemSize);
 
+    final highlight = _dragging || widget.isSelected;
+
     return Positioned(
       left: x, top: y,
       child: GestureDetector(
+        onTap: widget.onSelect,
         onScaleStart: (details) {
+          widget.onSelect();
           setState(() {
             _dragging = true;
             _baseScale = _scale;
@@ -1249,11 +1534,11 @@ class _DraggableRoomItemState extends State<_DraggableRoomItem> {
           duration: const Duration(milliseconds: 80),
           width: itemSize, height: itemSize,
           decoration: BoxDecoration(
-            color: _dragging ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
+            color: highlight ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _dragging ? _primary.withValues(alpha: 0.5) : Colors.transparent,
-              width: _dragging ? 2 : 0,
+              color: highlight ? _primary.withValues(alpha: 0.6) : Colors.transparent,
+              width: highlight ? 2 : 0,
             ),
           ),
           alignment: Alignment.center,
@@ -1353,7 +1638,8 @@ class _FixtureToggleRow extends StatelessWidget {
 class _WindowFixture extends StatelessWidget {
   final double width;
   final double height;
-  const _WindowFixture({required this.width, required this.height});
+  final RoomTheme theme;
+  const _WindowFixture({required this.width, required this.height, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -1361,9 +1647,9 @@ class _WindowFixture extends StatelessWidget {
       width: width.clamp(48.0, 110.0),
       height: height.clamp(40.0, 90.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFB8DDEF),
+        color: theme.glass,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: const Color(0xFF8B7355), width: 3),
+        border: Border.all(color: theme.frame, width: 3),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.10),
@@ -1381,13 +1667,13 @@ class _WindowFixture extends StatelessWidget {
           Center(
             child: Container(
               height: 2,
-              color: const Color(0xFF8B7355).withOpacity(0.7),
+              color: theme.frame.withOpacity(0.7),
             ),
           ),
           Center(
             child: Container(
               width: 2,
-              color: const Color(0xFF8B7355).withOpacity(0.7),
+              color: theme.frame.withOpacity(0.7),
             ),
           ),
         ],
@@ -1402,7 +1688,8 @@ class _WindowFixture extends StatelessWidget {
 class _DoorFixture extends StatelessWidget {
   final double width;
   final double height;
-  const _DoorFixture({required this.width, required this.height});
+  final RoomTheme theme;
+  const _DoorFixture({required this.width, required this.height, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -1410,9 +1697,9 @@ class _DoorFixture extends StatelessWidget {
       width: width.clamp(40.0, 80.0),
       height: height.clamp(60.0, 150.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFB58B5E),
+        color: theme.door,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-        border: Border.all(color: const Color(0xFF7A5A38), width: 3),
+        border: Border.all(color: theme.doorPanel, width: 3),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.12),
@@ -1429,7 +1716,7 @@ class _DoorFixture extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 border: Border.all(
-                    color: const Color(0xFF7A5A38).withOpacity(0.5), width: 2),
+                    color: theme.doorPanel.withOpacity(0.5), width: 2),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -1439,8 +1726,8 @@ class _DoorFixture extends StatelessWidget {
             alignment: const Alignment(0.7, 0.1),
             child: Container(
               width: 6, height: 6,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFD54F),
+              decoration: BoxDecoration(
+                color: theme.knob,
                 shape: BoxShape.circle,
               ),
             ),
@@ -1457,7 +1744,8 @@ class _DoorFixture extends StatelessWidget {
 class _DeskFixture extends StatelessWidget {
   final double width;
   final double height;
-  const _DeskFixture({required this.width, required this.height});
+  final RoomTheme theme;
+  const _DeskFixture({required this.width, required this.height, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -1474,9 +1762,9 @@ class _DeskFixture extends StatelessWidget {
             width: w,
             height: topH,
             decoration: BoxDecoration(
-              color: const Color(0xFFC9A878),
+              color: theme.deskTop,
               borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: const Color(0xFF8B7355), width: 2),
+              border: Border.all(color: theme.frame, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.10),
@@ -1493,8 +1781,8 @@ class _DeskFixture extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(width: w * 0.10, color: const Color(0xFF8B7355)),
-                  Container(width: w * 0.10, color: const Color(0xFF8B7355)),
+                  Container(width: w * 0.10, color: theme.deskLeg),
+                  Container(width: w * 0.10, color: theme.deskLeg),
                 ],
               ),
             ),

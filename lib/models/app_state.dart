@@ -116,6 +116,9 @@ class AppState {
     }
   }
 
+  /// 선택된 방 테마 id ('basic', 'princess', 'modern', 'forest')
+  String roomThemeId = 'basic';
+
   // ── 주간 홈 경험 추적 ─────────────────────────────────────────────────────
   int homeWeekNumber = 0;
   String? homeWeekFitId;
@@ -248,6 +251,7 @@ class AppState {
     roomItemPositions = {};
     roomItemScales = {};
     roomFixtures = {};
+    roomThemeId = 'basic';
     homeWeekNumber = 0;
     homeWeekFitId = null;
     homeWeekDareId = null;
@@ -276,6 +280,7 @@ class AppState {
     ),
     'roomItemScales': roomItemScales,
     'roomFixtures': roomFixtures.toList(),
+    'roomThemeId': roomThemeId,
     'homeWeekNumber': homeWeekNumber,
     'homeWeekFitId': homeWeekFitId,
     'homeWeekDareId': homeWeekDareId,
@@ -330,6 +335,7 @@ class AppState {
     });
 
     roomFixtures = Set<String>.from(j['roomFixtures'] ?? []);
+    roomThemeId = (j['roomThemeId'] as String?) ?? 'basic';
 
     homeWeekNumber = (j['homeWeekNumber'] as int?) ?? 0;
     homeWeekFitId = j['homeWeekFitId'] as String?;
