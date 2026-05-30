@@ -58,39 +58,28 @@ class _CharacterRoomScreenState extends State<CharacterRoomScreen> {
           children: [
             _ACHeader(points: state.points),
 
-            // 방+캐릭터 씬 — AC 스타일 2D 룸
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              child: _RoomScene(state: state, avatarController: _avatarController),
-            ),
-
-            // 진행도
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _ProgressRow(state: state),
-            ),
+            // 미니 캐릭터/방 상태 스트립
+            _MiniPreviewStrip(state: state),
             const SizedBox(height: 6),
 
-            // 탭 바
+            // 탭 바 (캐릭터, 방)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _ACTabBar(
                 index: _tabIndex,
-                tabs: const ['캐릭터', '방', '상점'],
+                tabs: const ['캐릭터', '방'],
                 onChanged: (i) => setState(() => _tabIndex = i),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
 
             // 탭 콘텐츠
             Expanded(
               child: IndexedStack(
                 index: _tabIndex,
                 children: [
-                  // 캐릭터 탭 — AvatarMakerCustomizer가 모든 커스터마이징 제공
                   _CharacterEditTab(avatarController: _avatarController),
                   _RoomEditTab(onUpdate: () => setState(() {})),
-                  _ShopTab(onUpdate: () => setState(() {})),
                 ],
               ),
             ),
@@ -110,6 +99,24 @@ WardrobeItem? _findItem(String? id) {
     if (it.id == id) return it;
   }
   return null;
+}
+
+/// Wardrobe + AI 아이템 통합 이모지 조회
+String? _slotEmoji(String? id) {
+  if (id == null) return null;
+  final w = _findItem(id);
+  if (w != null) return w.emoji;
+  return AppState.i.aiDecoItems.where((it) => it.id == id).firstOrNull?.emoji;
+}
+
+/// Wardrobe + AI 아이템 통합 색상 조회 (AI 아이템은 기본 색상)
+Color _slotColor(String? id, {bool isWall = false}) {
+  final w = _findItem(id);
+  if (w != null) return _categoryColor(w.category);
+  final hasAi = id != null &&
+      AppState.i.aiDecoItems.any((it) => it.id == id);
+  if (hasAi) return const Color(0xFFB8D4A8); // AI 기본 색
+  return isWall ? _wallDefault : _floorDefault;
 }
 
 // 카테고리별 소프트 색상
@@ -309,7 +316,7 @@ class _RoomScene extends StatelessWidget {
               left: 18,
               child: wall != null
                   ? _WallDecor(item: wall)
-                  : const _EmptySlotPill(label: '벽'),
+                  : _EmptySlotPill(label: '벽'),
             ),
 
             // ── 책상/가구 (바닥 왼쪽) ─────────────────────────────────
@@ -318,7 +325,7 @@ class _RoomScene extends StatelessWidget {
               bottom: 6,
               child: desk != null
                   ? _FloorFurniture(item: desk, size: 46)
-                  : const _EmptySlotPill(label: '책상'),
+                  : _EmptySlotPill(label: '책상'),
             ),
 
             // ── 바닥 소품 (바닥 오른쪽) ───────────────────────────────
@@ -327,7 +334,7 @@ class _RoomScene extends StatelessWidget {
               bottom: 6,
               child: floor != null
                   ? _FloorFurniture(item: floor, size: 38)
-                  : const _EmptySlotPill(label: '바닥'),
+                  : _EmptySlotPill(label: '바닥'),
             ),
 
             // ── 캐릭터 (바닥 중앙) — AvatarMaker SVG 캐릭터 ──────────
@@ -580,92 +587,108 @@ class _ACTabBar extends StatelessWidget {
 //   캐릭터 편집 탭 — AvatarMakerCustomizer (avatar_maker 패키지)
 //   헤어, 피부, 눈, 입, 옷, 소품 등 전문적인 커스터마이저 제공
 // ══════════════════════════════════════════════════════════════════════════════
-class _CharacterEditTab extends StatelessWidget {
+// ══════════════════════════════════════════════════════════════════════════════
+//  캐릭터 편집 탭 — 아바타(AvatarMaker) + 코디(경험 획득 아이템)
+// ══════════════════════════════════════════════════════════════════════════════
+class _CharacterEditTab extends StatefulWidget {
   final AvatarMakerController avatarController;
   const _CharacterEditTab({required this.avatarController});
 
   @override
+  State<_CharacterEditTab> createState() => _CharacterEditTabState();
+}
+
+class _CharacterEditTabState extends State<_CharacterEditTab> {
+  int _subTab = 0; // 0 = 아바타, 1 = 코디
+
+  @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── 서브 탭 ──────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
           child: Row(
             children: [
-              const Expanded(
-                child: _ACSection(
-                  emoji: '✨',
-                  title: '내 캐릭터 꾸미기',
-                  subtitle: '헤어·피부·눈·옷·소품을 자유롭게 바꿔보세요',
-                ),
-              ),
-              // 저장 버튼 — 탭하면 현재 설정을 저장
-              AvatarMakerSaveWidget(controller: avatarController),
+              Expanded(child: _SubTabBtn(label: '🧑 아바타', selected: _subTab == 0, onTap: () => setState(() => _subTab = 0))),
+              const SizedBox(width: 8),
+              Expanded(child: _SubTabBtn(label: '👗 코디', selected: _subTab == 1, onTap: () => setState(() => _subTab = 1))),
             ],
           ),
         ),
-        // autosave: true → 선택할 때마다 자동 저장, 위 SaveWidget은 명시적 저장용
-        Expanded(
-          child: AvatarMakerCustomizer(
-            controller: avatarController,
-            autosave: true,
+
+        if (_subTab == 0)
+          Expanded(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('헤어·피부·눈·표정을 자유롭게 바꿔보세요', style: TextStyle(fontSize: 12, color: _textSub))),
+                      AvatarMakerSaveWidget(controller: widget.avatarController),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: AvatarMakerCustomizer(controller: widget.avatarController, autosave: true),
+                ),
+              ],
+            ),
+          )
+        else
+          Expanded(
+            child: _WardrobeGrid(
+              dimension: SelfDimension.external,
+              slots: characterSlots,
+              slotLabels: characterSlotLabels,
+              equippedMap: AppState.i.characterEquipped,
+              onEquip: (slot, id) => setState(() {
+                final cur = AppState.i.characterEquipped[slot];
+                AppState.i.equipCharacter(slot, cur == id ? null : id);
+              }),
+            ),
           ),
-        ),
       ],
     );
   }
 }
 
-// _CharacterPreviewCard 와 _OutfitRow 는 AvatarMakerCustomizer로 대체됨
-
 // ══════════════════════════════════════════════════════════════════════════════
-//                방 편집 탭 — 상단 미니 룸 미리보기 + 슬롯 목록
+//  방 편집 탭 — 미니 룸 미리보기 + 슬롯 탭 + 아이템 그리드
 // ══════════════════════════════════════════════════════════════════════════════
-class _RoomEditTab extends StatelessWidget {
+class _RoomEditTab extends StatefulWidget {
   final VoidCallback onUpdate;
   const _RoomEditTab({required this.onUpdate});
 
   @override
+  State<_RoomEditTab> createState() => _RoomEditTabState();
+}
+
+class _RoomEditTabState extends State<_RoomEditTab> {
+  @override
   Widget build(BuildContext context) {
     final state = AppState.i;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── 방 미니 미리보기 ──────────────────────────────
-          _RoomPreviewCard(state: state),
-          const SizedBox(height: 16),
-
-          _ACSection(
-            emoji: '🏡',
-            title: '내면이 어떤지',
-            subtitle: '독서·명상·취미·음악·자연 경험이 방에 쌓여요',
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: _RoomPreviewCard(state: state),
+        ),
+        Expanded(
+          child: _WardrobeGrid(
+            dimension: SelfDimension.internal,
+            slots: roomSlots,
+            slotLabels: roomSlotLabels,
+            equippedMap: state.roomEquipped,
+            onEquip: (slot, id) => setState(() {
+              final cur = state.roomEquipped[slot];
+              state.equipRoom(slot, cur == id ? null : id);
+              widget.onUpdate();
+            }),
           ),
-          const SizedBox(height: 14),
-
-          for (final slot in roomSlots) ...[
-            _SlotSection(
-              slotLabel: roomSlotLabels[slot]!,
-              equippedId: state.roomEquipped[slot],
-              items: allWardrobeItems
-                  .where((it) =>
-                      it.dimension == SelfDimension.internal &&
-                      it.slot == slot &&
-                      state.wardrobeUnlocked.contains(it.id))
-                  .toList(),
-              onTap: (id) {
-                final cur = state.roomEquipped[slot];
-                state.equipRoom(slot, cur == id ? null : id);
-                onUpdate();
-              },
-            ),
-            const SizedBox(height: 14),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -677,17 +700,13 @@ class _RoomPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final wall   = _findItem(state.roomEquipped['wall']);
-    final desk   = _findItem(state.roomEquipped['desk']);
-    final floor  = _findItem(state.roomEquipped['floor']);
-    final window = _findItem(state.roomEquipped['window']);
+    final wallEmoji   = _slotEmoji(state.roomEquipped['wall']);
+    final deskEmoji   = _slotEmoji(state.roomEquipped['desk']);
+    final floorEmoji  = _slotEmoji(state.roomEquipped['floor']);
+    final windowEmoji = _slotEmoji(state.roomEquipped['window']);
 
-    final wallColor = wall != null
-        ? _categoryColor(wall.category)
-        : _wallDefault;
-    final floorColor = floor != null
-        ? _categoryColor(floor.category).withOpacity(0.85)
-        : _floorDefault;
+    final wallColor  = _slotColor(state.roomEquipped['wall'], isWall: true);
+    final floorColor = _slotColor(state.roomEquipped['floor']).withOpacity(0.85);
 
     return ACUICard(
       child: Container(
@@ -733,15 +752,15 @@ class _RoomPreviewCard extends StatelessWidget {
                     border: Border.all(color: const Color(0xFF8B7355), width: 2),
                     borderRadius: BorderRadius.circular(2),
                   ),
-                  child: window != null
-                      ? Center(child: Text(window.emoji,
+                  child: windowEmoji != null
+                      ? Center(child: Text(windowEmoji,
                           style: const TextStyle(fontSize: 14)))
                       : const Center(child: Text('☁️',
                           style: TextStyle(fontSize: 12))),
                 ),
               ),
               // 벽 장식
-              if (wall != null)
+              if (wallEmoji != null)
                 Positioned(
                   top: 6, left: 14,
                   child: Container(
@@ -753,23 +772,23 @@ class _RoomPreviewCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: Center(
-                      child: Text(wall.emoji,
+                      child: Text(wallEmoji,
                           style: const TextStyle(fontSize: 14)),
                     ),
                   ),
                 ),
               // 책상
-              if (desk != null)
+              if (deskEmoji != null)
                 Positioned(
                   bottom: 6, left: 14,
-                  child: Text(desk.emoji,
+                  child: Text(deskEmoji,
                       style: const TextStyle(fontSize: 28)),
                 ),
               // 바닥 소품
-              if (floor != null)
+              if (floorEmoji != null)
                 Positioned(
                   bottom: 6, right: 14,
-                  child: Text(floor.emoji,
+                  child: Text(floorEmoji,
                       style: const TextStyle(fontSize: 24)),
                 ),
               // 현재 채워진 슬롯 수
@@ -909,13 +928,7 @@ class _ItemCell extends StatelessWidget {
           width: isSelected ? 2 : 1,
         ),
         boxShadow: isSelected
-            ? [
-                BoxShadow(
-                  color: _primary.withOpacity(0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                )
-              ]
+            ? [BoxShadow(color: _primary.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))]
             : null,
       ),
       child: Column(
@@ -941,329 +954,93 @@ class _ItemCell extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//                              상점 탭
+//  미니 캐릭터/방 상태 스트립
 // ══════════════════════════════════════════════════════════════════════════════
-class _ShopTab extends StatefulWidget {
-  final VoidCallback onUpdate;
-  const _ShopTab({required this.onUpdate});
-
-  @override
-  State<_ShopTab> createState() => _ShopTabState();
-}
-
-class _ShopTabState extends State<_ShopTab> {
-  SelfDimension _dim = SelfDimension.external;
-  ExperienceCategory? _cat;
+class _MiniPreviewStrip extends StatelessWidget {
+  final AppState state;
+  const _MiniPreviewStrip({required this.state});
 
   @override
   Widget build(BuildContext context) {
-    final state = AppState.i;
-    final visible = allWardrobeItems.where((it) {
-      if (it.dimension != _dim) return false;
-      if (_cat != null && it.category != _cat) return false;
-      return true;
-    }).toList();
-    final cats =
-        ExperienceCategory.values.where((c) => c.dimension == _dim).toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final animal = state.selectedAnimal;
+    return Container(
+      height: 64,
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: _bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
         children: [
-          _DimToggle(
-            value: _dim,
-            onChanged: (d) => setState(() {
-              _dim = d;
-              _cat = null;
-            }),
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(color: _bgSoft, borderRadius: BorderRadius.circular(12)),
+            alignment: Alignment.center,
+            child: Text(animal?.emoji ?? '🐾', style: const TextStyle(fontSize: 26)),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 34,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _FilterChip(
-                  label: '전체',
-                  selected: _cat == null,
-                  onTap: () => setState(() => _cat = null),
-                ),
-                const SizedBox(width: 6),
-                for (final c in cats) ...[
-                  _FilterChip(
-                    label: '${c.emoji} ${c.label}',
-                    selected: _cat == c,
-                    onTap: () => setState(() => _cat = c),
-                  ),
-                  const SizedBox(width: 6),
-                ],
+                Text(animal?.name ?? '내 캐릭터',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                Text('Lv.${state.level} · ${state.points}P',
+                    style: const TextStyle(fontSize: 11, color: _textSub)),
               ],
             ),
           ),
-          const SizedBox(height: 14),
-
-          if (visible.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: ACUIEmptyState(
-                icon: const Text('🛒', style: TextStyle(fontSize: 56)),
-                title: '아이템 없음',
-                message: '해당 카테고리에 아이템이 없어요',
-              ),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 0.88,
-              ),
-              itemCount: visible.length,
-              itemBuilder: (_, i) {
-                final item = visible[i];
-                final isUnlocked =
-                    state.wardrobeUnlocked.contains(item.id);
-                final canAfford = state.points >= item.cost;
-                return _ShopCard(
-                  item: item,
-                  isUnlocked: isUnlocked,
-                  canAfford: canAfford,
-                  onBuy: () =>
-                      _handleBuy(context, state, item, isUnlocked),
-                );
-              },
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F0FF),
+              borderRadius: BorderRadius.circular(20),
             ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('✨', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 4),
+                Text('아이템 ${state.aiDecoItems.length}개',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF5E35B1))),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
-
-  void _handleBuy(BuildContext context, AppState state,
-      WardrobeItem item, bool isUnlocked) {
-    if (isUnlocked) {
-      _snack(context,
-          '이미 가지고 있어요 — ${item.dimension.label} 탭에서 장착해보세요');
-      return;
-    }
-    if (state.buyWardrobe(item)) {
-      setState(() {});
-      widget.onUpdate();
-      _snack(context,
-          '${item.emoji} ${item.name} 획득! ${item.dimension.label}에서 꾸며보세요',
-          color: _primary);
-    } else {
-      _snack(context, '포인트가 부족해요. 경험을 더 완료해봐요!');
-    }
-  }
-
-  void _snack(BuildContext context, String msg, {Color? color}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: color,
-      behavior: SnackBarBehavior.floating,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//              상점 카드
+//  서브 탭 버튼
 // ══════════════════════════════════════════════════════════════════════════════
-class _ShopCard extends StatelessWidget {
-  final WardrobeItem item;
-  final bool isUnlocked;
-  final bool canAfford;
-  final VoidCallback onBuy;
-
-  const _ShopCard({
-    required this.item,
-    required this.isUnlocked,
-    required this.canAfford,
-    required this.onBuy,
-  });
-
-  String get _slotLabel {
-    final m = item.dimension == SelfDimension.external
-        ? characterSlotLabels
-        : roomSlotLabels;
-    return m[item.slot] ?? item.slot;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ACUICard(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _bgSoft,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(item.emoji,
-                      style: const TextStyle(fontSize: 24)),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _bgSoft,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(_slotLabel,
-                      style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: _primary)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(item.name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: _textMain)),
-            const SizedBox(height: 3),
-            Expanded(
-              child: Text(
-                item.unlockHint,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 10, color: _textSub, height: 1.4),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ACUIButton(
-                onPressed: onBuy,
-                child: Text(
-                  isUnlocked ? '보유 중' : '⭐ ${item.cost}P',
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-//              외면/내면 토글
-// ══════════════════════════════════════════════════════════════════════════════
-class _DimToggle extends StatelessWidget {
-  final SelfDimension value;
-  final ValueChanged<SelfDimension> onChanged;
-  const _DimToggle({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return ACUICard(
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            for (final d in SelfDimension.values)
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onChanged(d),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: value == d
-                          ? _primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    alignment: Alignment.center,
-                    child: Column(
-                      children: [
-                        Text(
-                          d.label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: value == d
-                                ? Colors.white
-                                : _textSub,
-                          ),
-                        ),
-                        Text(
-                          d.description,
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: value == d
-                                ? Colors.white70
-                                : _textSub,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-//              필터 칩
-// ══════════════════════════════════════════════════════════════════════════════
-class _FilterChip extends StatelessWidget {
+class _SubTabBtn extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const _SubTabBtn({required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: selected ? _primary : _bgCard,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: selected ? _primary : _border),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : _textSub,
-          ),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : _textSub),
         ),
       ),
     );
@@ -1271,37 +1048,128 @@ class _FilterChip extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//              섹션 헤더
+//  워드로브 그리드 — 슬롯 탭 + 아이템 그리드 (스크롤 없음)
 // ══════════════════════════════════════════════════════════════════════════════
-class _ACSection extends StatelessWidget {
-  final String emoji;
-  final String title;
-  final String subtitle;
-  const _ACSection({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
+class _WardrobeGrid extends StatefulWidget {
+  final SelfDimension dimension;
+  final List<String> slots;
+  final Map<String, String> slotLabels;
+  final Map<String, String?> equippedMap;
+  final void Function(String slot, String id) onEquip;
+
+  const _WardrobeGrid({
+    required this.dimension,
+    required this.slots,
+    required this.slotLabels,
+    required this.equippedMap,
+    required this.onEquip,
   });
 
   @override
+  State<_WardrobeGrid> createState() => _WardrobeGridState();
+}
+
+class _WardrobeGridState extends State<_WardrobeGrid> {
+  late String _slot;
+
+  @override
+  void initState() {
+    super.initState();
+    _slot = widget.slots.first;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final state = AppState.i;
+    final equippedId = widget.equippedMap[_slot];
+
+    // 경험으로 잠금 해제된 워드로브 아이템
+    final wardrobeItems = allWardrobeItems
+        .where((it) =>
+            it.slot == _slot &&
+            it.dimension == widget.dimension &&
+            state.wardrobeUnlocked.contains(it.id))
+        .toList();
+
+    // AI 생성 아이템
+    final aiItems = state.aiDecoItems
+        .where((it) => it.slot == _slot && it.dimension == widget.dimension)
+        .toList();
+
+    // 통합 아이템 목록: (emoji, name, id, isAi)
+    final allItems = [
+      ...wardrobeItems.map((it) => (it.emoji, it.name, it.id, false)),
+      ...aiItems.map((it) => (it.emoji, it.name, it.id, true)),
+    ];
+
+    return Column(
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 20)),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: _primary)),
-            const SizedBox(height: 1),
-            Text(subtitle,
-                style: const TextStyle(fontSize: 11, color: _textSub)),
-          ],
+        // ── 슬롯 탭 ──────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: widget.slots.map((s) {
+              final sel = s == _slot;
+              final count =
+                  allWardrobeItems.where((it) => it.slot == s && it.dimension == widget.dimension && state.wardrobeUnlocked.contains(it.id)).length +
+                  state.aiDecoItems.where((it) => it.slot == s && it.dimension == widget.dimension).length;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _slot = s),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: sel ? _primary : _bgCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: sel ? _primary : _border),
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(widget.slotLabels[s]!,
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                                color: sel ? Colors.white : _textSub)),
+                        if (count > 0)
+                          Text('$count', style: TextStyle(fontSize: 10,
+                              color: sel ? Colors.white70 : _textSub)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 아이템 그리드 ─────────────────────────────────────
+        Expanded(
+          child: allItems.isEmpty
+              ? _EmptySlot(dimension: widget.dimension)
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.88,
+                  ),
+                  itemCount: allItems.length,
+                  itemBuilder: (_, i) {
+                    final (emoji, name, id, isAi) = allItems[i];
+                    final isEquipped = equippedId == id;
+                    return GestureDetector(
+                      onTap: () => widget.onEquip(_slot, id),
+                      child: _WardrobeItemCell(
+                        emoji: emoji, name: name,
+                        isSelected: isEquipped, isAi: isAi,
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -1309,23 +1177,123 @@ class _ACSection extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//              빈 슬롯 필
+//  워드로브 아이템 셀
+// ══════════════════════════════════════════════════════════════════════════════
+class _WardrobeItemCell extends StatelessWidget {
+  final String emoji;
+  final String name;
+  final bool isSelected;
+  final bool isAi;
+
+  const _WardrobeItemCell({
+    required this.emoji,
+    required this.name,
+    this.isSelected = false,
+    this.isAi = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      decoration: BoxDecoration(
+        color: isSelected ? _bgSoft : _bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isSelected ? _primary : _border, width: isSelected ? 2 : 1),
+        boxShadow: isSelected
+            ? [BoxShadow(color: _primary.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 2))]
+            : null,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 34)),
+              if (isAi)
+                Positioned(
+                  right: -4, top: -4,
+                  child: Container(
+                    width: 16, height: 16,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C4DFF),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text('✨', style: TextStyle(fontSize: 8)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+                  color: isSelected ? _primary : _textMain)),
+          if (isSelected)
+            const Text('착용 중', style: TextStyle(fontSize: 9, color: _primary)),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  빈 슬롯 안내
+// ══════════════════════════════════════════════════════════════════════════════
+class _EmptySlot extends StatelessWidget {
+  final SelfDimension dimension;
+  const _EmptySlot({required this.dimension});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🔒', style: TextStyle(fontSize: 44)),
+            const SizedBox(height: 12),
+            const Text('아직 아이템이 없어요',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(
+              dimension == SelfDimension.external
+                  ? '경험을 완료하면\nAI가 캐릭터 아이템을 생성해줘요 ✨'
+                  : '경험을 완료하면\nAI가 방 소품을 생성해줘요 ✨',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: _textSub, height: 1.6),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  빈 슬롯 필
 // ══════════════════════════════════════════════════════════════════════════════
 class _EmptySlotPill extends StatelessWidget {
   final String label;
-  const _EmptySlotPill({required this.label});
+  const _EmptySlotPill({required this.label, super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
+        color: _bgSoft,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: _border),
       ),
-      child: Text(label,
-          style: const TextStyle(fontSize: 9, color: _textSub)),
+      child: Text(label, style: const TextStyle(fontSize: 10, color: _textSub)),
     );
   }
 }
