@@ -21,11 +21,21 @@ class AppState {
   };
 
   // ── 캐릭터/방 신규 시스템 ─────────────────────────────────────────────────
-  /// 선택된 캐릭터 동물 ID
+  /// 선택된 얼굴 이모지 (캐릭터 베이스)
+  String selectedFaceEmoji = '🐱';
+
+  /// 선택된 동물 id (null = 아직 미선택)
   String? selectedAnimalId;
 
-  /// 현재 선택된 동물 객체
+  /// 선택된 동물 객체 (id 기반 조회)
   Animal? get selectedAnimal => animalById(selectedAnimalId);
+
+  /// 동물 선택 — id 저장 + 이모지 동기화
+  void selectAnimal(String id) {
+    selectedAnimalId = id;
+    final a = animalById(id);
+    if (a != null) selectedFaceEmoji = a.emoji;
+  }
 
   /// 잠금 해제된 캐릭터/방 아이템 id 집합 (실 경험을 통해서만 해제됨)
   Set<String> wardrobeUnlocked = {};
@@ -105,10 +115,6 @@ class AppState {
     points -= item.cost;
     wardrobeUnlocked.add(item.id);
     return true;
-  }
-
-  void selectAnimal(String id) {
-    selectedAnimalId = id;
   }
 
   /// 캐릭터 슬롯 장착 / 해제 (id == null 이면 해제)
