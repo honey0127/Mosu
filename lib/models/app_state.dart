@@ -104,6 +104,18 @@ class AppState {
     roomItemScales[id] = scale.clamp(0.5, 2.5);
   }
 
+  // ── 방 고정 요소(창문/문/책상) 탈부착 ──────────────────────────────────────
+  /// 현재 방에 부착된 고정 요소 id ('window', 'door', 'desk')
+  Set<String> roomFixtures = {};
+
+  void toggleFixture(String id) {
+    if (roomFixtures.contains(id)) {
+      roomFixtures.remove(id);
+    } else {
+      roomFixtures.add(id);
+    }
+  }
+
   // ── 주간 홈 경험 추적 ─────────────────────────────────────────────────────
   int homeWeekNumber = 0;
   String? homeWeekFitId;
@@ -235,6 +247,7 @@ class AppState {
     placedRoomItemIds = {};
     roomItemPositions = {};
     roomItemScales = {};
+    roomFixtures = {};
     homeWeekNumber = 0;
     homeWeekFitId = null;
     homeWeekDareId = null;
@@ -262,6 +275,7 @@ class AppState {
       (k, v) => MapEntry(k, {'dx': v.dx, 'dy': v.dy}),
     ),
     'roomItemScales': roomItemScales,
+    'roomFixtures': roomFixtures.toList(),
     'homeWeekNumber': homeWeekNumber,
     'homeWeekFitId': homeWeekFitId,
     'homeWeekDareId': homeWeekDareId,
@@ -314,6 +328,8 @@ class AppState {
     (j['roomItemScales'] as Map? ?? {}).forEach((k, v) {
       roomItemScales[k as String] = (v as num).toDouble();
     });
+
+    roomFixtures = Set<String>.from(j['roomFixtures'] ?? []);
 
     homeWeekNumber = (j['homeWeekNumber'] as int?) ?? 0;
     homeWeekFitId = j['homeWeekFitId'] as String?;
