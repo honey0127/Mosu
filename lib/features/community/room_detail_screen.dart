@@ -67,7 +67,9 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
     return (members: members, verifs: verifs, requests: requests);
   }
 
-  void _reload() => setState(() => _dataFuture = _load());
+  void _reload() => setState(() {
+        _dataFuture = _load();
+      });
 
   void _snack(String msg) {
     if (!mounted) return;
@@ -386,9 +388,30 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             final iAmOwner = myRole == 'owner';
             final iAmAdmin = myRole == 'owner' || myRole == 'admin';
 
+            // 멤버별 최근(승인된 것 우선) 인증 = 그 사람의 "활동"
+            Verification? latestFor(String uid) {
+              Verification? best;
+              for (final v in verifs) {
+                if (v.userId != uid) continue;
+                if (best == null || v.createdAt.isAfter(best.createdAt)) {
+                  best = v;
+                }
+              }
+              return best;
+            }
+
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               children: [
+                // ── 멤버 활동 액자 (방 제목 바로 아래) ────────────────────
+                if (members.isNotEmpty) ...[
+                  _ActivityGrid(
+                    members: members,
+                    latestOf: latestFor,
+                    myId: myId,
+                  ),
+                  const SizedBox(height: 22),
+                ],
                 if (iAmOwner) ...[
                   FilledButton.icon(
                     onPressed: _showInviteCode,
@@ -735,6 +758,205 @@ class _StatusBadge extends StatelessWidget {
 }
 
 // ─────────────────────────── 멤버 타일 ───────────────────────────────────────
+// ─────────────────────────── 멤버 활동 액자 그리드 ───────────────────────────
+class _ActivityGrid extends StatelessWidget {
+  final List<RoomMember> members;
+  final Verification? Function(String userId) latestOf;
+  final String? myId;
+  const _ActivityGrid({
+    required this.members,
+    required this.latestOf,
+    required this.myId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final count = members.length;
+    // 인원 수에 맞춰 칸(열) 조절: 1명 = 1열, 그 외 = 2열
+    final cols = count <= 1 ? 1 : 2;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      itemCount: count,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 1,
+      ),
+      itemBuilder: (_, i) {
+        final m = members[i];
+        return _ActivityCell(
+          member: m,
+          latest: latestOf(m.userId),
+          isMe: m.userId == myId,
+        );
+      },
+    );
+  }
+}
+
+class _ActivityCell extends StatelessWidget {
+  final RoomMember member;
+  final Verification? latest;
+  final bool isMe;
+  const _ActivityCell({
+    required this.member,
+    required this.latest,
+    required this.isMe,
+  });
+
+  String get _name => member.displayName ?? member.handle ?? '익명 탐험가';
+  String get _label => isMe ? '$_name (나)' : _name;
+
+  String _fmtTime(DateTime d) {
+    final h = d.hour.toString().padLeft(2, '0');
+    final mi = d.minute.toString().padLeft(2, '0');
+    return '$h:$mi';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: latest != null ? _photoCell(latest!) : _emptyCell(),
+    );
+  }
+
+  Widget _photoCell(Verification v) {
+    final hasCaption = v.caption != null && v.caption!.isNotEmpty;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          v.photoUrl,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, progress) => progress == null
+              ? child
+              : Container(color: AppColors.primaryExtraLight),
+          errorBuilder: (_, _, _) =>
+              Container(color: AppColors.primaryExtraLight),
+        ),
+        // 하단 가독성용 그라데이션
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Colors.black54],
+              stops: [0.45, 1.0],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(9),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _miniAvatar(onPhoto: true),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              if (hasCaption)
+                Text(
+                  v.caption!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              const SizedBox(height: 2),
+              Text(
+                _fmtTime(v.createdAt),
+                style: const TextStyle(color: Colors.white70, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _emptyCell() {
+    return Container(
+      color: AppColors.primaryExtraLight,
+      padding: const EdgeInsets.all(9),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _miniAvatar(onPhoto: false),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            '아직 활동이 없어요',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniAvatar({required bool onPhoto}) {
+    final photo = member.photoUrl;
+    if (photo != null && photo.startsWith('http')) {
+      return CircleAvatar(
+        radius: 12,
+        backgroundColor: AppColors.white,
+        backgroundImage: NetworkImage(photo),
+      );
+    }
+    if (photo != null && photo.startsWith('animal:')) {
+      return CircleAvatar(
+        radius: 12,
+        backgroundColor: AppColors.white,
+        child: Text(photo.substring(7), style: const TextStyle(fontSize: 13)),
+      );
+    }
+    return CircleAvatar(
+      radius: 12,
+      backgroundColor: AppColors.white,
+      child: Text(
+        _name.isNotEmpty ? _name.substring(0, 1) : '?',
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
 class _MemberTile extends StatelessWidget {
   final RoomMember member;
   final bool isMe;
@@ -854,10 +1076,7 @@ class _CaptionDialogState extends State<_CaptionDialog> {
     return AlertDialog(
       scrollable: true,
       title: const Text('인증 올리기'),
-      insetPadding: EdgeInsets.fromLTRB(
-        24, 24, 24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+      insetPadding: const EdgeInsets.all(24),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -920,10 +1139,7 @@ class _RejectReasonDialogState extends State<_RejectReasonDialog> {
     return AlertDialog(
       scrollable: true,
       title: const Text('거절 사유'),
-      insetPadding: EdgeInsets.fromLTRB(
-        24, 24, 24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+      insetPadding: const EdgeInsets.all(24),
       content: SizedBox(
         width: double.maxFinite,
         child: TextField(
