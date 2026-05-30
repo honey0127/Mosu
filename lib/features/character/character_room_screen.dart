@@ -602,21 +602,56 @@ class _CharacterEditTabState extends State<_CharacterEditTab> {
 
         if (_subTab == 0)
           Expanded(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                  child: Row(
-                    children: [
-                      const Expanded(child: Text('헤어·피부·눈·표정을 자유롭게 바꿔보세요', style: TextStyle(fontSize: 12, color: _textSub))),
-                      AvatarMakerSaveWidget(controller: widget.avatarController),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: AvatarMakerCustomizer(controller: widget.avatarController, autosave: true),
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // 편집 패널(커스터마이저) 높이를 제한 → 위쪽 아바타를 크게 노출
+                final customizerH =
+                    (constraints.maxHeight * 0.5).clamp(280.0, 460.0);
+                return Column(
+                  children: [
+                    // ── 큰 아바타 미리보기 (제페토 스타일) ──────────────
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+                        decoration: BoxDecoration(
+                          color: _bgSoft,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: AvatarMakerAvatar(
+                              controller: widget.avatarController),
+                        ),
+                      ),
+                    ),
+                    // ── 안내 + 저장 ────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                              child: Text('헤어·피부·눈·표정을 자유롭게 바꿔보세요',
+                                  style: TextStyle(
+                                      fontSize: 12, color: _textSub))),
+                          AvatarMakerSaveWidget(
+                              controller: widget.avatarController),
+                        ],
+                      ),
+                    ),
+                    // ── 컴팩트 커스터마이저 (고정 높이) ─────────────────
+                    SizedBox(
+                      height: customizerH,
+                      child: AvatarMakerCustomizer(
+                        controller: widget.avatarController,
+                        autosave: true,
+                        scaffoldHeight: customizerH,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           )
         else
