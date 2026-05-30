@@ -208,26 +208,29 @@ class _MyPageScreenState extends State<MyPageScreen>
                     onTap: () => _openAvatarSheet(userId),
                   ),
                   const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        nickname,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nickname,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '총 ${state.completedIds.length}개 경험 완료',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
+                        Text(
+                          '총 ${state.completedIds.length}개 경험 완료',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const Spacer(),
                 ],
               ),
             ),
