@@ -1,7 +1,6 @@
 import 'wardrobe_item.dart';
 import 'experience.dart';
 import 'animal.dart';
-import 'deco_item.dart';
 
 // ─────────────────────────── AppState (singleton) ────────────────────────────
 class AppState {
@@ -21,20 +20,27 @@ class AppState {
     'badge': null,
   };
 
-  // ── 캐릭터/방 시스템 ─────────────────────────────────────────────────────
+  // ── 캐릭터/방 신규 시스템 ─────────────────────────────────────────────────
+  /// 선택된 얼굴 이모지 (캐릭터 베이스)
   String selectedFaceEmoji = '🐱';
+
+  /// 선택된 동물 id (null = 아직 미선택)
   String? selectedAnimalId;
 
+  /// 선택된 동물 객체 (id 기반 조회)
   Animal? get selectedAnimal => animalById(selectedAnimalId);
 
+  /// 동물 선택 — id 저장 + 이모지 동기화
   void selectAnimal(String id) {
     selectedAnimalId = id;
     final a = animalById(id);
     if (a != null) selectedFaceEmoji = a.emoji;
   }
 
+  /// 잠금 해제된 캐릭터/방 아이템 id 집합 (실 경험을 통해서만 해제됨)
   Set<String> wardrobeUnlocked = {};
 
+  /// 캐릭터에 장착된 아이템 (slot → itemId)
   Map<String, String?> characterEquipped = {
     'hat': null,
     'top': null,
@@ -42,6 +48,7 @@ class AppState {
     'accessory': null,
   };
 
+  /// 방에 배치된 아이템 (slot → itemId)
   Map<String, String?> roomEquipped = {
     'wall': null,
     'desk': null,
@@ -49,25 +56,16 @@ class AppState {
     'window': null,
   };
 
+  /// 완료한 경험의 카테고리 카운트 (어떤 영역을 얼마나 채웠는지 추적)
   Map<ExperienceCategory, int> categoryCounts = {};
-
-  // ── AI 생성 소품 인벤토리 ──────────────────────────────────────────────────
-  List<DecoItem> aiDecoItems = [];
-
-  void addAiDecoItem(DecoItem item) {
-    aiDecoItems.add(item);
-    unlockedIds.add(item.id);
-  }
-
-  List<DecoItem> get allOwnedDecoItems =>
-      allItems.where((it) => unlockedIds.contains(it.id)).toList() + aiDecoItems;
 
   // ── 주간 홈 경험 추적 ─────────────────────────────────────────────────────
   int homeWeekNumber = 0;
   String? homeWeekFitId;
   String? homeWeekDareId;
   Set<String> homeWeekCompletedIds = {};
-  Set<String> homeWeekExcluded = {};
+  Set<String> homeWeekExcluded = {}; // 네 버튼 시 새 페어 선택에서 제외할 ID
+  int? pendingLevelUp;               // 홈 화면에서 레벨업 폭죽 표시용
 
   void setWeeklyPair({
     required int weekNum,
@@ -80,9 +78,10 @@ class AppState {
     homeWeekCompletedIds = {};
   }
 
+  /// "네" 버튼: 다음 build에서 완료된 경험을 제외한 새 페어를 강제 선택하도록 예약
   void markForRefresh(String completedId) {
     homeWeekExcluded = {completedId};
-    homeWeekNumber = -1;
+    homeWeekNumber = -1; // _pickPair()에서 재선택 트리거
   }
 
   void addPoints(int p) {
@@ -90,48 +89,8 @@ class AppState {
     totalEarned += p;
   }
 
-  // 레벨 시스템 (100P per level)
-  int get level => (totalEarned ~/ 100) + 1;
-  int get xpInLevel => totalEarned % 100;
-
-  // 캐릭터/방 채움 비율
-  double get characterFillRatio {
-    final slots = characterEquipped.keys.toList();
-    final filled = slots.where((s) => characterEquipped[s] != null).length;
-    return filled / slots.length;
-  }
-
-  double get roomFillRatio {
-    final slots = roomEquipped.keys.toList();
-    final filled = slots.where((s) => roomEquipped[s] != null).length;
-    return filled / slots.length;
-  }
-
-  // 장착/해제
-  void equip(String slot, String id) => equipped[slot] = id;
-
-  void equipCharacter(String slot, String? id) {
-    characterEquipped[slot] = id;
-  }
-
-  void equipRoom(String slot, String? id) {
-    roomEquipped[slot] = id;
-  }
-
-  bool buy(String id, int cost) {
-    if (points < cost) return false;
-    points -= cost;
-    unlockedIds.add(id);
-    return true;
-  }
-
-  bool buyWardrobe(WardrobeItem item) {
-    if (points < item.cost) return false;
-    points -= item.cost;
-    wardrobeUnlocked.add(item.id);
-    return true;
-  }
-
+  /// 경험 완료 — 포인트 지급 + 카테고리 카운트 + 아이템 자동 해금
+  /// 새로 해금된 아이템 목록을 반환 (RewardDialog에서 표시용)
   List<WardrobeItem> completeExperience(Experience exp) {
     addPoints(exp.difficulty.points);
     completedIds.add(exp.id);
@@ -141,20 +100,74 @@ class AppState {
       homeWeekCompletedIds.add(exp.id);
     }
 
-    categoryCounts[exp.category] = (categoryCounts[exp.category] ?? 0) + 1;
+    // 카테고리 카운트 업데이트
+    categoryCounts[exp.category] =
+        (categoryCounts[exp.category] ?? 0) + 1;
 
     final newlyUnlocked = <WardrobeItem>[];
+
     for (final item in allWardrobeItems) {
       if (wardrobeUnlocked.contains(item.id)) continue;
       if (item.category != exp.category) continue;
+
+      // 무료 아이템 → 즉시 자동 해금
       if (item.cost == 0) {
+        wardrobeUnlocked.add(item.id);
+        newlyUnlocked.add(item);
+        continue;
+      }
+
+      // 유료 아이템 → 해당 카테고리 누적 횟수 기반 해금
+      // 1회: cost ≤ 50 / 3회: cost ≤ 100 / 5회: 전체
+      final count = categoryCounts[exp.category] ?? 0;
+      final unlockable = (count >= 5) ||
+          (count >= 3 && item.cost <= 100) ||
+          (count >= 1 && item.cost <= 50);
+      if (unlockable) {
         wardrobeUnlocked.add(item.id);
         newlyUnlocked.add(item);
       }
     }
+
     return newlyUnlocked;
   }
-}
 
-// 기존 DecoItem 상점 목록 (비어있음)
-const List<DecoItem> allItems = [];
+  bool buy(String id, int cost) {
+    if (points < cost) return false;
+    points -= cost;
+    unlockedIds.add(id);
+    return true;
+  }
+
+  /// 캐릭터/방 아이템 구매 — 별도 컬렉션에 저장
+  bool buyWardrobe(WardrobeItem item) {
+    if (points < item.cost) return false;
+    points -= item.cost;
+    wardrobeUnlocked.add(item.id);
+    return true;
+  }
+
+  /// 캐릭터 슬롯 장착 / 해제 (id == null 이면 해제)
+  void equipCharacter(String slot, String? id) =>
+      characterEquipped[slot] = id;
+
+  /// 방 슬롯 배치 / 제거
+  void equipRoom(String slot, String? id) => roomEquipped[slot] = id;
+
+  void equip(String slot, String id) => equipped[slot] = id;
+
+  int get level => (totalEarned / 100).floor() + 1;
+  int get xpInLevel => totalEarned % 100;
+
+  /// 방이 얼마나 채워졌는지 (0.0 ~ 1.0)
+  double get roomFillRatio {
+    final filled = roomEquipped.values.where((v) => v != null).length;
+    return filled / roomSlots.length;
+  }
+
+  /// 캐릭터가 얼마나 꾸며졌는지 (0.0 ~ 1.0)
+  double get characterFillRatio {
+    final filled = characterEquipped.values.where((v) => v != null).length;
+    return filled / characterSlots.length;
+  }
+}

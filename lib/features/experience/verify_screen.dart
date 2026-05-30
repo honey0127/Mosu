@@ -1,11 +1,9 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/experience.dart';
 import '../../models/app_state.dart';
 import '../../models/wardrobe_item.dart';
-import '../../models/deco_item.dart';
-import '../../services/deco_ai_service.dart';
 import '../shell/main_shell.dart';
 
 class VerifyScreen extends StatefulWidget {
@@ -158,7 +156,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
     try {
       final picked = await _picker.pickImage(
         source: source,
-        imageQuality: 85,
+        imageQuality: 85,     // 용량 최적화
         maxWidth: 1920,
       );
       if (picked != null) {
@@ -179,32 +177,33 @@ class _VerifyScreenState extends State<VerifyScreen> {
   }
 
   // ── 완료 처리 ───────────────────────────────────────────────
-  Future<void> _complete() async {
+  void _complete() {
     if (_completed) return;
+    final oldLevel = AppState.i.level;
     final newItems = AppState.i.completeExperience(widget.exp);
+    final newLevel = AppState.i.level;
+    if (newLevel > oldLevel) AppState.i.pendingLevelUp = newLevel;
     setState(() => _completed = true);
 
-    // AI 소품 생성 (비동기)
-    final decoItem = await DecoAiService.generateDecoItem(widget.exp);
-    if (decoItem != null) {
-      AppState.i.addAiDecoItem(decoItem);
-    }
-
-    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => _RewardDialog(
         exp: widget.exp,
         newItems: newItems,
-        newDecoItem: decoItem,
-        onClose: () {
+        onYes: () {
+          // 완료한 경험을 제외하고 새 페어를 선택하도록 예약
+          AppState.i.markForRefresh(widget.exp.id);
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(
-              builder: (_) => const MainShell(initialIndex: 3),
+              builder: (_) => const MainShell(initialIndex: 0),
             ),
             (route) => false,
           );
+        },
+        onNo: () {
+          Navigator.of(context).pop(); // 다이얼로그 닫기
+          if (mounted) Navigator.of(context).pop(); // VerifyScreen 닫기
         },
       ),
     );
@@ -370,6 +369,18 @@ class _VerifyScreenState extends State<VerifyScreen> {
                 ),
               ),
 
+              if (_photo == null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline, size: 14, color: Colors.red),
+                    const SizedBox(width: 4),
+                    Text('사진이 없습니다',
+                        style: TextStyle(fontSize: 12, color: Colors.red.shade600)),
+                  ],
+                ),
+              ],
+
               const SizedBox(height: 28),
 
               // ── 감정 태그 ──────────────────────────────────────────
@@ -417,6 +428,18 @@ class _VerifyScreenState extends State<VerifyScreen> {
                 }).toList(),
               ),
 
+              if (_emotions.isEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline, size: 14, color: Colors.red),
+                    const SizedBox(width: 4),
+                    Text('감정을 선택해주세요',
+                        style: TextStyle(fontSize: 12, color: Colors.red.shade600)),
+                  ],
+                ),
+              ],
+
               const SizedBox(height: 28),
 
               // ── 짧은 후기 ──────────────────────────────────────────
@@ -458,7 +481,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                   ),
-                  onPressed: _completed ? null : _complete,
+                  onPressed: (_completed || _photo == null || _emotions.isEmpty)
+                      ? null
+                      : _complete,
                   child: Text(
                     _completed
                         ? '완료됨! ✅'
@@ -482,175 +507,187 @@ class _VerifyScreenState extends State<VerifyScreen> {
 class _RewardDialog extends StatelessWidget {
   final Experience exp;
   final List<WardrobeItem> newItems;
-  final DecoItem? newDecoItem;
-  final VoidCallback onClose;
+  final VoidCallback onYes;
+  final VoidCallback onNo;
 
   const _RewardDialog({
     required this.exp,
     required this.newItems,
-    this.newDecoItem,
-    required this.onClose,
+    required this.onYes,
+    required this.onNo,
   });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(newItems.isNotEmpty ? '🎁' : '🎉',
-                style: const TextStyle(fontSize: 56)),
-            const SizedBox(height: 16),
-            const Text('경험 완료!',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text(exp.title,
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-
-            // ── 포인트 배지 ──────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F3E3),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('⭐', style: TextStyle(fontSize: 26)),
-                  const SizedBox(width: 10),
-                  Text('+${exp.difficulty.points}P 획득!',
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF5A9A4A))),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text('현재 포인트: ${AppState.i.points}P',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-            // ── AI 생성 소품 보상 ─────────────────────────────────
-            if (newDecoItem != null) ...[
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(newItems.isNotEmpty ? '🎁' : '🎉',
+                  style: const TextStyle(fontSize: 56)),
+              const SizedBox(height: 16),
+              const Text('경험 완료!',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(exp.title,
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 20),
+
+              // ── 포인트 배지 ──────────────────────────────────────
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F0FF),
+                  color: const Color(0xFFE8F3E3),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFB39DDB)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Row(
-                      children: [
-                        Text('✨', style: TextStyle(fontSize: 16)),
-                        SizedBox(width: 6),
-                        Text('새 소품 획득!',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF5E35B1))),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text(newDecoItem!.emoji,
-                            style: const TextStyle(fontSize: 36)),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(newDecoItem!.name,
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 2),
-                            Text(newDecoItem!.hint,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade500)),
-                          ],
-                        ),
-                      ],
-                    ),
+                    const Text('⭐', style: TextStyle(fontSize: 26)),
+                    const SizedBox(width: 10),
+                    Text('+${exp.difficulty.points}P 획득!',
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF5A9A4A))),
                   ],
                 ),
               ),
-            ],
+              const SizedBox(height: 8),
+              Text('현재 포인트: ${AppState.i.points}P',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
 
-            // ── 새로 해금된 캐릭터/방 아이템 ─────────────────────
-            if (newItems.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFFCC02)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Text('🎁', style: TextStyle(fontSize: 16)),
-                        SizedBox(width: 6),
-                        Text('아이템 해금!',
-                            style: TextStyle(
+              // ── 새로 해금된 아이템 ────────────────────────────────
+              if (newItems.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E7),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFFCC02), width: 1.5),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('🔓', style: TextStyle(fontSize: 16)),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${exp.category.label} 경험으로 아이템 해금!',
+                            style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF795548))),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ...newItems.map((item) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3),
+                                color: Color(0xFFBF8C00)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: newItems.map((item) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(item.emoji,
                                   style: const TextStyle(fontSize: 22)),
-                              const SizedBox(width: 8),
-                              Text(item.name,
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(width: 6),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item.name,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600)),
+                                  Text(
+                                    item.dimension == SelfDimension.external
+                                        ? '캐릭터 아이템'
+                                        : '방 아이템',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
-                        )),
-                  ],
+                        )).toList(),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+
+              const SizedBox(height: 24),
+              const Text(
+                '새로운 경험을 추가하시겠습니까?',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        onPressed: onNo,
+                        child: const Text('아니오',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF7DB879),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: onYes,
+                        child: const Text('네',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
-
-            const SizedBox(height: 24),
-
-            // ── 확인 버튼 ─────────────────────────────────────────
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF7DB879),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: onClose,
-                child: const Text('방 꾸미러 가기 →',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
