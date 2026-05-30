@@ -82,11 +82,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEEEDFE),
+                    color: const Color(0xFFE8F3E3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.camera_alt_outlined,
-                      color: Color(0xFF7F77DD), size: 22),
+                      color: Color(0xFF7DB879), size: 22),
                 ),
                 title: const Text('카메라로 찍기',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
@@ -103,11 +103,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEEEDFE),
+                    color: const Color(0xFFE8F3E3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.photo_library_outlined,
-                      color: Color(0xFF7F77DD), size: 22),
+                      color: Color(0xFF7DB879), size: 22),
                 ),
                 title: const Text('갤러리에서 선택',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
@@ -220,7 +220,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEEEDFE),
+                  color: const Color(0xFFE8F3E3),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -241,7 +241,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                             style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF534AB7)),
+                                color: Color(0xFF5A9A4A)),
                           ),
                         ],
                       ),
@@ -386,12 +386,12 @@ class _VerifyScreenState extends State<VerifyScreen> {
                           horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: sel
-                            ? const Color(0xFF7F77DD)
+                            ? const Color(0xFF7DB879)
                             : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: sel
-                              ? const Color(0xFF7F77DD)
+                              ? const Color(0xFF7DB879)
                               : Colors.grey.shade300,
                         ),
                       ),
@@ -444,7 +444,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                 height: 54,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF7F77DD),
+                    backgroundColor: const Color(0xFF7DB879),
                     disabledBackgroundColor: Colors.grey.shade200,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
@@ -505,7 +505,7 @@ class _RewardDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFFEEEDFE),
+                color: const Color(0xFFE8F3E3),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -517,7 +517,7 @@ class _RewardDialog extends StatelessWidget {
                       style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF534AB7))),
+                          color: Color(0xFF5A9A4A))),
                 ],
               ),
             ),
@@ -608,7 +608,7 @@ class _RewardDialog extends StatelessWidget {
               height: 48,
               child: FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF7F77DD),
+                  backgroundColor: const Color(0xFF7DB879),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),

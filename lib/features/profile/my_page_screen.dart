@@ -84,7 +84,7 @@ class _MyPageScreenState extends State<MyPageScreen>
             ListTile(
               leading: const Icon(
                 Icons.photo_library_outlined,
-                color: Color(0xFF7F77DD),
+                color: Color(0xFF7DB879),
               ),
               title: const Text('갤러리에서 선택'),
               subtitle: const Text('내 사진 중에서 골라요'),
@@ -233,14 +233,14 @@ class _MyPageScreenState extends State<MyPageScreen>
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEEDFE),
+                      color: const Color(0xFFE8F3E3),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '⭐ ${state.points}P',
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF534AB7),
+                        color: Color(0xFF5A9A4A),
                       ),
                     ),
                   ),
@@ -256,8 +256,8 @@ class _MyPageScreenState extends State<MyPageScreen>
                 Tab(text: '캘린더'),
                 Tab(text: '내 설정'),
               ],
-              indicatorColor: const Color(0xFF7F77DD),
-              labelColor: const Color(0xFF7F77DD),
+              indicatorColor: const Color(0xFF7DB879),
+              labelColor: const Color(0xFF7DB879),
               unselectedLabelColor: Colors.grey,
               indicatorWeight: 2,
             ),
@@ -428,7 +428,7 @@ class _GoalCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEEDFE),
+        color: const Color(0xFFE8F3E3),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -442,7 +442,7 @@ class _GoalCard extends StatelessWidget {
             ),
             child: const Icon(
               Icons.flag_rounded,
-              color: Color(0xFF7F77DD),
+              color: Color(0xFF7DB879),
               size: 20,
             ),
           ),
@@ -494,7 +494,7 @@ class _ProgressBanner extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF7F77DD), Color(0xFF534AB7)],
+          colors: [Color(0xFF7DB879), Color(0xFF5A9A4A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -810,7 +810,7 @@ class _SettingsTab extends StatelessWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF7F77DD),
+              backgroundColor: const Color(0xFF7DB879),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -890,7 +890,7 @@ class _NicknameDialogState extends State<_NicknameDialog> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF7F77DD),
+            backgroundColor: const Color(0xFF7DB879),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -984,7 +984,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEEEDFE),
+                        color: const Color(0xFFE8F3E3),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -992,7 +992,7 @@ class _ProfileHeaderCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF534AB7),
+                          color: Color(0xFF5A9A4A),
                         ),
                       ),
                     ),
@@ -1038,7 +1038,7 @@ class _ProfileStat extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF534AB7),
+              color: Color(0xFF5A9A4A),
             ),
           ),
           const SizedBox(height: 2),
@@ -1079,7 +1079,7 @@ class _ProfileCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFEEEDFE),
+                color: const Color(0xFFE8F3E3),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -1087,7 +1087,7 @@ class _ProfileCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF534AB7),
+                  color: Color(0xFF5A9A4A),
                 ),
               ),
             ),
@@ -1132,14 +1132,14 @@ class _ProfileCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEEEDFE),
+                          color: const Color(0xFFE8F3E3),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           h,
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF534AB7),
+                            color: Color(0xFF5A9A4A),
                           ),
                         ),
                       ),
@@ -1238,10 +1238,10 @@ class _SettingItem extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFEEEDFE),
+                color: const Color(0xFFE8F3E3),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: 20, color: const Color(0xFF7F77DD)),
+              child: Icon(icon, size: 20, color: const Color(0xFF7DB879)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1312,7 +1312,7 @@ class _ProfileAvatar extends StatelessWidget {
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: const Color(0xFF7F77DD),
+                color: const Color(0xFF7DB879),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),
@@ -1332,7 +1332,7 @@ class _ProfileAvatar extends StatelessWidget {
     if (avatar == AuthService.avatarAnimal && animal != null) {
       return animal!.furColor;
     }
-    return const Color(0xFFEEEDFE);
+    return const Color(0xFFE8F3E3);
   }
 
   Widget get _content {

@@ -201,7 +201,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: ElevatedButton(
                   onPressed: _loading ? null : _signup,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7F77DD),
+                    backgroundColor: const Color(0xFF7DB879),
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.shade200,
                     elevation: 0,
@@ -270,7 +270,7 @@ class _SignupScreenState extends State<SignupScreen> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(
-                color: Color(0xFF7F77DD), width: 1.5),
+                color: Color(0xFF7DB879), width: 1.5),
           ),
         ),
       );

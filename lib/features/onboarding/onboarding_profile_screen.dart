@@ -14,11 +14,8 @@ class OnboardingProfileScreen extends StatefulWidget {
 
 class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     with SingleTickerProviderStateMixin {
-  // ── 나이 ──────────────────────────────────────────────────────────────────
   final _ageCtrl = TextEditingController();
 
-  // ── MBTI ──────────────────────────────────────────────────────────────────
-  // 인덱스 0=E/I, 1=S/N, 2=T/F, 3=J/P
   final List<List<String>> _mbtiDims = [
     ['E', 'I'],
     ['S', 'N'],
@@ -27,21 +24,12 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
   ];
   final List<String?> _mbtiSel = [null, null, null, null];
 
-  // ── 직업 ──────────────────────────────────────────────────────────────────
   final List<String> _jobOptions = [
-    '학생',
-    '직장인',
-    '프리랜서',
-    '자영업자',
-    '취업준비생',
-    '주부',
-    '무직',
-    '기타',
+    '학생', '직장인', '프리랜서', '자영업자', '취업준비생', '주부', '무직', '기타',
   ];
   String? _selectedJob;
   final _jobDetailCtrl = TextEditingController();
 
-  // ── 취미 ──────────────────────────────────────────────────────────────────
   final List<String> _defaultHobbies = [
     '독서', '영화 감상', '운동', '요리', '여행', '게임',
     '음악', '드로잉', '사진', '등산', '코딩', '요가',
@@ -50,10 +38,17 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
   final List<String> _customHobbies = [];
   final _hobbyCtrl = TextEditingController();
 
-  // ── 공통 ──────────────────────────────────────────────────────────────────
   String? _error;
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
+
+  static const _green = Color(0xFF7DB879);
+  static const _greenDark = Color(0xFF5A9A4A);
+  static const _greenLight = Color(0xFFE8F3E3);
+  static const _bg = Color(0xFFF2F2F0);
+  static const _textPrimary = Color(0xFF1A1A1A);
+  static const _textSub = Color(0xFF888888);
+  static const _border = Color(0xFFDDDDDD);
 
   @override
   void initState() {
@@ -75,7 +70,6 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     super.dispose();
   }
 
-  // ── 완료 처리 ─────────────────────────────────────────────────────────────
   Future<void> _finish() async {
     final age = int.tryParse(_ageCtrl.text.trim());
     if (age == null || age < 1 || age > 120) {
@@ -133,50 +127,25 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     _hobbyCtrl.clear();
   }
 
-  // ── 색상 상수 ─────────────────────────────────────────────────────────────
-  static const _bg = Color(0xFF0E0E14);
-  static const _surface = Color(0xFF1A1A24);
-  static const _border = Color(0xFF2C2C3E);
-  static const _purple = Color(0xFF7F77DD);
-  static const _purpleLight = Color(0xFFAFA9EC);
-  static const _purpleDim = Color(0xFF534AB7);
-  static const _textPrimary = Colors.white;
-  static const _textSub = Color(0xFF888899);
-
-  // ── 공통 위젯 ─────────────────────────────────────────────────────────────
-  Widget _sectionTitle(String title) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
+  Widget _sectionLabel(String t) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
     child: Text(
-      title,
+      t,
       style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: _purpleLight,
-        letterSpacing: 0.5,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: _textPrimary,
       ),
     ),
-  );
-
-  Widget _card({required Widget child}) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: _surface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: _border, width: 0.8),
-    ),
-    child: child,
   );
 
   InputDecoration _inputDeco(String hint, {IconData? icon}) => InputDecoration(
     hintText: hint,
     hintStyle: const TextStyle(color: _textSub, fontSize: 14),
-    prefixIcon:
-    icon != null ? Icon(icon, color: _textSub, size: 18) : null,
+    prefixIcon: icon != null ? Icon(icon, color: _textSub, size: 18) : null,
     filled: true,
-    fillColor: const Color(0xFF11111A),
-    contentPadding:
-    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: const BorderSide(color: _border),
@@ -187,34 +156,60 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: _purple, width: 1.5),
+      borderSide: const BorderSide(color: _green, width: 1.5),
     ),
   );
 
-  // ── 나이 섹션 ─────────────────────────────────────────────────────────────
+  Widget _chip(String label, bool selected, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? _green : Colors.white,
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(
+              color: selected ? _green : _border,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: selected ? Colors.white : _textPrimary,
+            ),
+          ),
+        ),
+      );
+
   Widget _ageSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionTitle('나이'),
-      _card(
-        child: TextField(
-          controller: _ageCtrl,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(
-              color: _textPrimary, fontSize: 15),
-          decoration: _inputDeco('예: 25', icon: Icons.cake_outlined),
-        ),
+      _sectionLabel('나이'),
+      TextField(
+        controller: _ageCtrl,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: const TextStyle(color: _textPrimary, fontSize: 15),
+        decoration: _inputDeco('예: 25', icon: Icons.cake_outlined),
       ),
     ],
   );
 
-  // ── MBTI 섹션 ─────────────────────────────────────────────────────────────
   Widget _mbtiSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionTitle('MBTI'),
-      _card(
+      _sectionLabel('MBTI'),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _border),
+        ),
         child: Column(
           children: [
             GridView.builder(
@@ -231,24 +226,23 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
                 final dim = _mbtiDims[di];
                 return Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF11111A),
+                    color: _greenLight,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _border),
                   ),
                   child: Row(
-                    children: dim.map((letter) {
+                    children: dim.asMap().entries.map((entry) {
+                      final letter = entry.value;
                       final sel = _mbtiSel[di] == letter;
                       return Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(
-                                  () => _mbtiSel[di] = letter),
+                          onTap: () =>
+                              setState(() => _mbtiSel[di] = letter),
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
+                            duration: const Duration(milliseconds: 160),
+                            margin: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
-                              color: sel
-                                  ? _purple
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(9),
+                              color: sel ? _green : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -256,9 +250,7 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: sel
-                                    ? Colors.white
-                                    : _textSub,
+                                color: sel ? Colors.white : _textSub,
                               ),
                             ),
                           ),
@@ -270,22 +262,19 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
               },
             ),
             const SizedBox(height: 12),
-            // 결과 표시
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: Text(
                 _mbtiSel.every((s) => s != null)
                     ? _mbtiSel.join()
-                    : _mbtiSel
-                    .map((s) => s ?? '_')
-                    .join('  '),
+                    : _mbtiSel.map((s) => s ?? '_').join('  '),
                 key: ValueKey(_mbtiSel.join()),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 6,
                   color: _mbtiSel.every((s) => s != null)
-                      ? _purple
+                      ? _green
                       : _textSub,
                 ),
               ),
@@ -296,52 +285,32 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     ],
   );
 
-  // ── 직업 섹션 ─────────────────────────────────────────────────────────────
   Widget _jobSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionTitle('직업'),
-      _card(
+      _sectionLabel('직업'),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _border),
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 직업 칩 그리드
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: _jobOptions.map((job) {
                 final sel = _selectedJob == job;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedJob = job),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: sel ? _purpleDim : const Color(0xFF11111A),
-                      borderRadius: BorderRadius.circular(99),
-                      border: Border.all(
-                        color: sel ? _purple : _border,
-                        width: sel ? 1.5 : 0.8,
-                      ),
-                    ),
-                    child: Text(
-                      job,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: sel ? Colors.white : _textSub,
-                      ),
-                    ),
-                  ),
-                );
+                return _chip(job, sel, () => setState(() => _selectedJob = job));
               }).toList(),
             ),
             const SizedBox(height: 12),
-            // 상세 직업 입력
             TextField(
               controller: _jobDetailCtrl,
-              style:
-              const TextStyle(color: _textPrimary, fontSize: 14),
+              style: const TextStyle(color: _textPrimary, fontSize: 14),
               decoration: _inputDeco(
                 '상세 직업 (선택)  예: 백엔드 개발자',
                 icon: Icons.work_outline,
@@ -353,12 +322,17 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     ],
   );
 
-  // ── 취미 섹션 ─────────────────────────────────────────────────────────────
   Widget _hobbySection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionTitle('취미'),
-      _card(
+      _sectionLabel('취미'),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _border),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -370,45 +344,19 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
                 ..._customHobbies,
               ].map((h) {
                 final sel = _selHobbies.contains(h);
-                return GestureDetector(
-                  onTap: () => setState(() {
-                    sel
-                        ? _selHobbies.remove(h)
-                        : _selHobbies.add(h);
-                  }),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: sel ? _purpleDim : const Color(0xFF11111A),
-                      borderRadius: BorderRadius.circular(99),
-                      border: Border.all(
-                        color: sel ? _purple : _border,
-                        width: sel ? 1.5 : 0.8,
-                      ),
-                    ),
-                    child: Text(
-                      h,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: sel ? Colors.white : _textSub,
-                      ),
-                    ),
-                  ),
-                );
+                return _chip(h, sel, () => setState(() {
+                  sel ? _selHobbies.remove(h) : _selHobbies.add(h);
+                }));
               }).toList(),
             ),
             const SizedBox(height: 12),
-            // 직접 추가
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _hobbyCtrl,
-                    style: const TextStyle(
-                        color: _textPrimary, fontSize: 14),
+                    style:
+                        const TextStyle(color: _textPrimary, fontSize: 14),
                     onSubmitted: (_) => _addCustomHobby(),
                     decoration: _inputDeco('직접 입력 후 추가'),
                   ),
@@ -420,7 +368,7 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
                     height: 46,
                     width: 46,
                     decoration: BoxDecoration(
-                      color: _purpleDim,
+                      color: _greenDark,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.add,
@@ -435,7 +383,6 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
     ],
   );
 
-  // ── 빌드 ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -445,7 +392,6 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
           opacity: _fadeAnim,
           child: Column(
             children: [
-              // ── 헤더 ────────────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
                 child: Column(
@@ -454,28 +400,21 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
                     const Text(
                       '나를 소개해요',
                       style: TextStyle(
-                        fontSize: 30,
+                        fontSize: 28,
                         fontWeight: FontWeight.w800,
                         height: 1.22,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
+                        color: _textPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
+                    const Text(
                       '입력한 정보로 더 맞춤화된 경험을 추천해드릴게요',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.40),
-                      ),
+                      style: TextStyle(fontSize: 13, color: _textSub),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // ── 스크롤 영역 ──────────────────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -490,34 +429,32 @@ class _OnboardingProfileScreenState extends State<OnboardingProfileScreen>
                       const SizedBox(height: 20),
                       _hobbySection(),
                       const SizedBox(height: 24),
-
-                      // ── 에러 메시지 ────────────────────────────────────
                       if (_error != null) ...[
                         Row(
                           children: [
                             const Icon(Icons.error_outline,
                                 color: Color(0xFFE57373), size: 15),
                             const SizedBox(width: 6),
-                            Text(
-                              _error!,
-                              style: const TextStyle(
-                                color: Color(0xFFE57373),
-                                fontSize: 13,
+                            Expanded(
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(
+                                  color: Color(0xFFE57373),
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
                       ],
-
-                      // ── 완료 버튼 ──────────────────────────────────────
                       SizedBox(
                         width: double.infinity,
                         height: 54,
                         child: ElevatedButton(
                           onPressed: _finish,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _purple,
+                            backgroundColor: _green,
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(

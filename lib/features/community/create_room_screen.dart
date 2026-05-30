@@ -15,7 +15,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   bool _loading = false;
   String? _error;
 
-  static const _purple = Color(0xFF7F77DD);
+  static const _purple = Color(0xFF7DB879);
   static const _bg = Color(0xFFF2F2F0);
 
   @override
@@ -205,7 +205,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(
-                color: Color(0xFF7F77DD), width: 1.5),
+                color: Color(0xFF7DB879), width: 1.5),
           ),
         ),
       );

@@ -17,7 +17,7 @@ class AnimalPickerScreen extends StatefulWidget {
 }
 
 class _AnimalPickerScreenState extends State<AnimalPickerScreen> {
-  static const _primary = Color(0xFF7F77DD);
+  static const _primary = Color(0xFF7DB879);
   String? _selectedId;
 
   @override
@@ -38,9 +38,9 @@ class _AnimalPickerScreenState extends State<AnimalPickerScreen> {
     final selected = animalById(_selectedId);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F2F0),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF2F2F0),
         foregroundColor: Colors.black87,
         elevation: 0,
         scrolledUnderElevation: 0,

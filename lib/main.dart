@@ -32,7 +32,7 @@ class DriftApp extends StatelessWidget {
         Locale('ko'),
       ],
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7F77DD)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7DB879)),
         useMaterial3: true,
       ),
       home: const SplashScreen(),

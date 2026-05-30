@@ -93,7 +93,7 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF7F77DD) : Colors.grey.shade500;
+    final color = selected ? const Color(0xFF7DB879) : Colors.grey.shade500;
     return InkResponse(
       onTap: onTap,
       radius: 28,
