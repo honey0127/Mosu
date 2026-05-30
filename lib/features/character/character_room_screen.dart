@@ -1221,9 +1221,10 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
   Widget build(BuildContext context) {
     final state = AppState.i;
     final theme = roomThemeById(state.roomThemeId);
-    final placed = state.placedRoomItemIds
-        .map((id) => state.aiDecoItems.where((it) => it.id == id).firstOrNull)
-        .whereType<DecoItem>()
+    DecoItem? decoOf(String itemId) =>
+        state.aiDecoItems.where((it) => it.id == itemId).firstOrNull;
+    final placed = state.placedItems
+        .where((p) => decoOf(p.itemId) != null)
         .toList();
 
     return LayoutBuilder(builder: (ctx, constraints) {
@@ -1282,24 +1283,29 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
               ),
             ),
             // 배치된 소품들 (드래그 이동 · 두 손가락으로 크기 조절)
-            for (final item in placed)
+            for (final p in placed)
               _DraggableRoomItem(
-                key: ValueKey(item.id),
-                item: item,
+                key: ValueKey(p.instanceId),
+                item: decoOf(p.itemId)!,
                 canvasWidth: w,
                 canvasHeight: h,
-                position: state.roomItemPositions[item.id] ?? const Offset(0.15, 0.3),
-                scale: state.roomItemScales[item.id] ?? 1.0,
+                position: p.position,
+                scale: p.scale,
+                rotation: p.rotation,
                 onMoved: (pos) {
-                  state.moveRoomItem(item.id, pos);
+                  state.movePlacedInstance(p.instanceId, pos);
                   widget.onChanged();
                 },
                 onScaleUpdate: (s) {
-                  state.updateRoomItemScale(item.id, s);
+                  state.scalePlacedInstance(p.instanceId, s);
+                  widget.onChanged();
+                },
+                onRotationUpdate: (r) {
+                  state.rotatePlacedInstance(p.instanceId, r);
                   widget.onChanged();
                 },
                 onRemove: () {
-                  state.removeRoomItem(item.id);
+                  state.removePlacedInstance(p.instanceId);
                   setState(() {});
                   widget.onChanged();
                 },
@@ -1316,7 +1322,7 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
                       color: Colors.white.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text('드래그로 이동 · 두 손가락으로 크기 조절 · 길게 눌러 삭제',
+                    child: const Text('드래그로 이동 · 두 손가락으로 크기·회전 · 길게 눌러 삭제',
                         style: TextStyle(fontSize: 9, color: _textSub)),
                   ),
                 ),
@@ -1337,8 +1343,10 @@ class _DraggableRoomItem extends StatefulWidget {
   final double canvasHeight;
   final Offset position;
   final double scale;
+  final double rotation;
   final void Function(Offset) onMoved;
   final void Function(double) onScaleUpdate;
+  final void Function(double) onRotationUpdate;
   final VoidCallback onRemove;
 
   const _DraggableRoomItem({
@@ -1348,8 +1356,10 @@ class _DraggableRoomItem extends StatefulWidget {
     required this.canvasHeight,
     required this.position,
     required this.scale,
+    required this.rotation,
     required this.onMoved,
     required this.onScaleUpdate,
+    required this.onRotationUpdate,
     required this.onRemove,
   });
 
@@ -1360,14 +1370,17 @@ class _DraggableRoomItem extends StatefulWidget {
 class _DraggableRoomItemState extends State<_DraggableRoomItem> {
   late Offset _pos;
   late double _scale;
+  late double _rotation;
   bool _dragging = false;
   double _baseScale = 1.0;
+  double _baseRotation = 0.0;
 
   @override
   void initState() {
     super.initState();
     _pos = widget.position;
     _scale = widget.scale;
+    _rotation = widget.rotation;
   }
 
   @override
@@ -1376,6 +1389,7 @@ class _DraggableRoomItemState extends State<_DraggableRoomItem> {
     if (!_dragging) {
       _pos = widget.position;
       _scale = widget.scale;
+      _rotation = widget.rotation;
     }
   }
 
@@ -1396,6 +1410,7 @@ class _DraggableRoomItemState extends State<_DraggableRoomItem> {
           setState(() {
             _dragging = true;
             _baseScale = _scale;
+            _baseRotation = _rotation;
           });
         },
         onScaleUpdate: (details) {
@@ -1405,10 +1420,11 @@ class _DraggableRoomItemState extends State<_DraggableRoomItem> {
               final nx = (_pos.dx + details.focalPointDelta.dx / widget.canvasWidth).clamp(0.0, 1.0);
               final ny = (_pos.dy + details.focalPointDelta.dy / widget.canvasHeight).clamp(0.0, 1.0);
               _pos = Offset(nx, ny);
-            } 
-            // 크기 업데이트 (핀치 줌)
-            if (details.pointerCount == 2) {
+            }
+            // 크기·회전 업데이트 (두 손가락 핀치)
+            if (details.pointerCount >= 2) {
               _scale = (_baseScale * details.scale).clamp(0.5, 3.0);
+              _rotation = _baseRotation + details.rotation;
             }
           });
         },
@@ -1416,31 +1432,35 @@ class _DraggableRoomItemState extends State<_DraggableRoomItem> {
           setState(() => _dragging = false);
           widget.onMoved(_pos);
           widget.onScaleUpdate(_scale);
+          widget.onRotationUpdate(_rotation);
         },
         onLongPress: widget.onRemove,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 80),
-          width: itemSize, height: itemSize,
-          decoration: BoxDecoration(
-            color: highlight ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: highlight ? _primary.withValues(alpha: 0.6) : Colors.transparent,
-              width: highlight ? 2 : 0,
+        child: Transform.rotate(
+          angle: _rotation,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 80),
+            width: itemSize, height: itemSize,
+            decoration: BoxDecoration(
+              color: highlight ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: highlight ? _primary.withValues(alpha: 0.6) : Colors.transparent,
+                width: highlight ? 2 : 0,
+              ),
             ),
+            alignment: Alignment.center,
+            child: widget.item.imageUrl != null
+                ? Image.network(
+                      widget.item.imageUrl!,
+                      width: itemSize,
+                      height: itemSize,
+                      fit: BoxFit.contain,
+                      color: Colors.white.withValues(alpha: 0.1),
+                      colorBlendMode: BlendMode.dstATop,
+                      errorBuilder: (_, __, ___) => Text(widget.item.emoji, style: TextStyle(fontSize: 28 * _scale)),
+                    )
+                : Text(widget.item.emoji, style: TextStyle(fontSize: 28 * _scale)),
           ),
-          alignment: Alignment.center,
-          child: widget.item.imageUrl != null
-              ? Image.network(
-                    widget.item.imageUrl!,
-                    width: itemSize,
-                    height: itemSize,
-                    fit: BoxFit.contain,
-                    color: Colors.white.withValues(alpha: 0.1),
-                    colorBlendMode: BlendMode.dstATop,
-                    errorBuilder: (_, __, ___) => Text(widget.item.emoji, style: TextStyle(fontSize: 28 * _scale)),
-                  )
-              : Text(widget.item.emoji, style: TextStyle(fontSize: 28 * _scale)),
         ),
       ),
     );
@@ -1711,53 +1731,81 @@ class _RoomItemPalette extends StatelessWidget {
         itemCount: items.length,
         itemBuilder: (_, i) {
           final item = items[i];
-          final placed = state.placedRoomItemIds.contains(item.id);
+          final count = state.placedCountOf(item.id);
+          final placed = count > 0;
           return GestureDetector(
             onTap: () {
-              if (placed) {
-                state.removeRoomItem(item.id);
-              } else {
-                state.placeRoomItem(item.id);
-              }
+              state.placeRoomItem(item.id);
               onChanged();
             },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              margin: const EdgeInsets.only(right: 10),
-              width: 66,
-              decoration: BoxDecoration(
-                color: placed ? _bgSoft : _bgCard,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: placed ? _primary : _border, width: placed ? 2 : 1),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  item.imageUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(
-                            item.imageUrl!,
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => Text(item.emoji, style: const TextStyle(fontSize: 26)),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: const EdgeInsets.only(right: 10, top: 6),
+                  width: 66,
+                  decoration: BoxDecoration(
+                    color: placed ? _bgSoft : _bgCard,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: placed ? _primary : _border, width: placed ? 2 : 1),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      item.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.network(
+                                item.imageUrl!,
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => Text(item.emoji, style: const TextStyle(fontSize: 26)),
+                              ),
+                            )
+                          : Text(item.emoji, style: const TextStyle(fontSize: 26)),
+                      const SizedBox(height: 3),
+                      Text(item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: placed ? _primary2 : _textSub,
+                              fontWeight: placed ? FontWeight.w700 : FontWeight.normal)),
+                      Text(placed ? '$count개 배치' : '탭하여 추가',
+                          style: const TextStyle(fontSize: 8, color: _textSub)),
+                    ],
+                  ),
+                ),
+                // 같은 소품을 하나 더 추가하는 작은 + 버튼
+                Positioned(
+                  right: 4,
+                  top: 0,
+                  child: GestureDetector(
+                    onTap: () {
+                      state.placeRoomItem(item.id);
+                      onChanged();
+                    },
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: _primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 2,
                           ),
-                        )
-                      : Text(item.emoji, style: const TextStyle(fontSize: 26)),
-                  const SizedBox(height: 3),
-                  Text(item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 9,
-                          color: placed ? _primary2 : _textSub,
-                          fontWeight: placed ? FontWeight.w700 : FontWeight.normal)),
-                  if (placed)
-                    const Text('배치됨', style: TextStyle(fontSize: 8, color: _primary)),
-                ],
-              ),
+                        ],
+                      ),
+                      child: const Icon(Icons.add, size: 14, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },

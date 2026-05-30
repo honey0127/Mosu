@@ -73,35 +73,57 @@ class AppState {
       aiDecoItems.where((it) => unlockedIds.contains(it.id)).toList();
 
   // ── 방 아이템 자유 배치 ───────────────────────────────────────────────────
-  Set<String> placedRoomItemIds = {};
-  Map<String, Offset> roomItemPositions = {};
-  Map<String, double> roomItemScales = {}; // 크기 배율 (0.5 ~ 2.5)
+  /// 배치된 소품 인스턴스 목록. 같은 itemId를 여러 개 배치할 수 있다.
+  List<PlacedRoomItem> placedItems = [];
+  int _placedItemSeq = 0;
 
-  void placeRoomItem(String id) {
-    placedRoomItemIds.add(id);
-    if (!roomItemPositions.containsKey(id)) {
-      final idx = placedRoomItemIds.length;
-      roomItemPositions[id] = Offset(
+  /// 특정 itemId가 몇 개 배치되어 있는지
+  int placedCountOf(String itemId) =>
+      placedItems.where((p) => p.itemId == itemId).length;
+
+  /// 새 인스턴스를 배치한다. 같은 소품을 여러 번 호출하면 여러 개가 생긴다.
+  void placeRoomItem(String itemId) {
+    final idx = placedItems.length;
+    final instanceId = '${itemId}_${_placedItemSeq++}';
+    placedItems.add(PlacedRoomItem(
+      instanceId: instanceId,
+      itemId: itemId,
+      position: Offset(
         0.15 + (idx % 4) * 0.18,
         0.35 + (idx ~/ 4) * 0.15,
-      );
-    }
-    if (!roomItemScales.containsKey(id)) {
-      roomItemScales[id] = 1.0;
-    }
+      ),
+      scale: 1.0,
+      rotation: 0.0,
+    ));
   }
 
-  void removeRoomItem(String id) => placedRoomItemIds.remove(id);
-
-  void moveRoomItem(String id, Offset pos) {
-    roomItemPositions[id] = Offset(
-      pos.dx.clamp(0.0, 1.0),
-      pos.dy.clamp(0.0, 1.0),
-    );
+  void removePlacedInstance(String instanceId) {
+    placedItems.removeWhere((p) => p.instanceId == instanceId);
   }
 
-  void updateRoomItemScale(String id, double scale) {
-    roomItemScales[id] = scale.clamp(0.5, 2.5);
+  void movePlacedInstance(String instanceId, Offset pos) {
+    final p = _findInstance(instanceId);
+    if (p == null) return;
+    p.position = Offset(pos.dx.clamp(0.0, 1.0), pos.dy.clamp(0.0, 1.0));
+  }
+
+  void scalePlacedInstance(String instanceId, double scale) {
+    final p = _findInstance(instanceId);
+    if (p == null) return;
+    p.scale = scale.clamp(0.5, 3.0);
+  }
+
+  void rotatePlacedInstance(String instanceId, double rotation) {
+    final p = _findInstance(instanceId);
+    if (p == null) return;
+    p.rotation = rotation;
+  }
+
+  PlacedRoomItem? _findInstance(String instanceId) {
+    for (final p in placedItems) {
+      if (p.instanceId == instanceId) return p;
+    }
+    return null;
   }
 
   // ── 방 고정 요소(창문/문/책상) 탈부착 ──────────────────────────────────────
@@ -247,9 +269,8 @@ class AppState {
     roomEquipped = {'wall': null, 'desk': null, 'floor': null, 'window': null};
     categoryCounts = {};
     aiDecoItems = [];
-    placedRoomItemIds = {};
-    roomItemPositions = {};
-    roomItemScales = {};
+    placedItems = [];
+    _placedItemSeq = 0;
     roomFixtures = {};
     roomThemeId = 'basic';
     homeWeekNumber = 0;
@@ -274,11 +295,7 @@ class AppState {
     'roomEquipped': roomEquipped,
     'categoryCounts': categoryCounts.map((k, v) => MapEntry(k.name, v)),
     'aiDecoItems': aiDecoItems.map((d) => d.toJson()).toList(),
-    'placedRoomItemIds': placedRoomItemIds.toList(),
-    'roomItemPositions': roomItemPositions.map(
-      (k, v) => MapEntry(k, {'dx': v.dx, 'dy': v.dy}),
-    ),
-    'roomItemScales': roomItemScales,
+    'placedItems': placedItems.map((p) => p.toJson()).toList(),
     'roomFixtures': roomFixtures.toList(),
     'roomThemeId': roomThemeId,
     'homeWeekNumber': homeWeekNumber,
@@ -320,19 +337,10 @@ class AppState {
         .map((d) => DecoItem.fromJson(d as Map<String, dynamic>))
         .toList();
 
-    placedRoomItemIds = Set<String>.from(j['placedRoomItemIds'] ?? []);
-
-    roomItemPositions = {};
-    (j['roomItemPositions'] as Map? ?? {}).forEach((k, v) {
-      final m = v as Map;
-      roomItemPositions[k as String] =
-          Offset((m['dx'] as num).toDouble(), (m['dy'] as num).toDouble());
-    });
-
-    roomItemScales = {};
-    (j['roomItemScales'] as Map? ?? {}).forEach((k, v) {
-      roomItemScales[k as String] = (v as num).toDouble();
-    });
+    placedItems = (j['placedItems'] as List? ?? [])
+        .map((p) => PlacedRoomItem.fromJson(p as Map<String, dynamic>))
+        .toList();
+    _placedItemSeq = placedItems.length;
 
     roomFixtures = Set<String>.from(j['roomFixtures'] ?? []);
     roomThemeId = (j['roomThemeId'] as String?) ?? 'basic';
@@ -344,4 +352,41 @@ class AppState {
     homeWeekExcluded = Set<String>.from(j['homeWeekExcluded'] ?? []);
     pendingLevelUp = null;
   }
+}
+
+// ─────────────────────────── 배치된 방 소품 인스턴스 ──────────────────────────
+class PlacedRoomItem {
+  final String instanceId;
+  final String itemId;
+  Offset position; // 0~1 비율 좌표
+  double scale;    // 0.5 ~ 3.0
+  double rotation; // 라디안
+
+  PlacedRoomItem({
+    required this.instanceId,
+    required this.itemId,
+    required this.position,
+    required this.scale,
+    required this.rotation,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'instanceId': instanceId,
+        'itemId': itemId,
+        'dx': position.dx,
+        'dy': position.dy,
+        'scale': scale,
+        'rotation': rotation,
+      };
+
+  factory PlacedRoomItem.fromJson(Map<String, dynamic> j) => PlacedRoomItem(
+        instanceId: j['instanceId'] as String,
+        itemId: j['itemId'] as String,
+        position: Offset(
+          (j['dx'] as num).toDouble(),
+          (j['dy'] as num).toDouble(),
+        ),
+        scale: (j['scale'] as num?)?.toDouble() ?? 1.0,
+        rotation: (j['rotation'] as num?)?.toDouble() ?? 0.0,
+      );
 }
