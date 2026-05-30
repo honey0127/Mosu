@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/app_state.dart';
 
 class AuthService {
   // 두 브랜치의 키(Key) 값들을 모두 유지합니다.
@@ -11,6 +12,7 @@ class AuthService {
   static const _kKeywordsDone = 'auth_keywords_done';
   static const _kUserKeywords = 'auth_user_keywords';
   static const _kCurrentUser  = 'auth_current_user'; // 자동 로그인용
+  static const _kAppStates    = 'auth_app_states';   // 유저별 AppState
 
   /// 프로필 사진을 캐릭터(내 공간에서 만든 동물 얼굴)로 설정했을 때의 값.
   /// 이 값이 아니면서 null도 아니면 갤러리 사진 파일 경로로 해석한다.
@@ -99,6 +101,7 @@ class AuthService {
     final savedUser = prefs.getString(_kCurrentUser);
     if (savedUser != null && _users.containsKey(savedUser)) {
       _currentUserId = savedUser;
+      await _loadAppState(savedUser);
     }
   }
 
@@ -162,15 +165,41 @@ class AuthService {
     await prefs.setString(_kUserKeywords, jsonEncode(_userKeywords));
   }
 
+  // 유저별 AppState 저장
+  static Future<void> _saveAppState(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kAppStates);
+    final Map<String, dynamic> all =
+        raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
+    all[userId] = AppState.i.toJson();
+    await prefs.setString(_kAppStates, jsonEncode(all));
+  }
+
+  // 유저별 AppState 불러오기
+  static Future<void> _loadAppState(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kAppStates);
+    if (raw == null) { AppState.i.reset(); return; }
+    final all = jsonDecode(raw) as Map<String, dynamic>;
+    final data = all[userId];
+    if (data == null) { AppState.i.reset(); return; }
+    AppState.i.loadFromJson(data as Map<String, dynamic>);
+  }
+
   // ── 공개 API ──────────────────────────────────────────────────────────────
 
   /// 로그인. 성공 시 유저 정보 Map 반환, 실패 시 null
-  static Map<String, String>? login(String id, String password) {
+  static Future<Map<String, String>?> login(String id, String password) async {
     final user = _users[id];
     if (user == null) return null;
     if (user['password'] != password) return null;
+    // 다른 유저였다면 현재 상태 저장
+    if (_currentUserId != null && _currentUserId != id) {
+      await _saveAppState(_currentUserId!);
+    }
     _currentUserId = id;
-    _saveCurrentUser(); // 자동 로그인용 저장 (fire-and-forget)
+    await _saveCurrentUser();
+    await _loadAppState(id);
     return user;
   }
 
@@ -272,9 +301,13 @@ class AuthService {
   }
 
   /// 로그아웃
-  static void logout() {
+  static Future<void> logout() async {
+    if (_currentUserId != null) {
+      await _saveAppState(_currentUserId!);
+    }
     _currentUserId = null;
-    _saveCurrentUser(); // 저장된 유저 삭제
+    AppState.i.reset();
+    await _saveCurrentUser();
   }
 
   /// 닉네임 가져오기. 비어 있으면 친근한 기본값으로 대체해 화면에 빈칸이 보이지 않게 한다.

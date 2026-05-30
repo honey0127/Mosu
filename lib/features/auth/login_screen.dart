@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() { _loading = true; _error = null; });
 
-    final result = AuthService.login(id, pw);
+    final result = await AuthService.login(id, pw);
     await Future.delayed(const Duration(milliseconds: 500)); // UX 딜레이
 
     if (!mounted) return;
