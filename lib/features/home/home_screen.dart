@@ -241,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   fontSize: 13, color: Colors.grey.shade500),
                             ),
                             const SizedBox(height: 4),
-                            Text('탐험가 Lv.${state.level}',
+                            Text('${AuthService.getNickname(userId)} Lv.${state.level}',
                                 style: const TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w700)),
@@ -303,7 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -311,13 +311,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Column(
                       children: [
+                        // ── 오른쪽 위 버튼 ─────────────────────────
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF7DB879),
+                              padding: EdgeInsets.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              AppState.i.homeWeekNumber = -1;
+                              AppState.i.homeWeekExcluded = {};
+                              _refresh();
+                            },
+                            child: const Text(
+                              '새로운 경험 추가하기 →',
+                              style: TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         const Text('🎉', style: TextStyle(fontSize: 40)),
                         const SizedBox(height: 12),
-                        const Text('모든 경험을 완료했어요!',
+                        const Text('이번 주 경험을 완료했어요!',
                             style: TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 6),
-                        Text('정말 대단해요. 새로운 경험이 곧 추가될 예정이에요.',
+                        Text('버튼을 눌러 새로운 경험을 추가해봐요!',
                             style: TextStyle(
                                 fontSize: 13, color: Colors.grey.shade500),
                             textAlign: TextAlign.center),

@@ -215,4 +215,111 @@ class AppState {
     final filled = characterEquipped.values.where((v) => v != null).length;
     return filled / characterSlots.length;
   }
+
+  // ── 유저별 데이터 분리 ─────────────────────────────────────────────────────
+
+  void reset() {
+    points = 0;
+    totalEarned = 0;
+    completedIds = [];
+    unlockedIds = {};
+    preferredKeywordLabels = [];
+    equipped = {'background': null, 'slot1': null, 'slot2': null, 'slot3': null, 'badge': null};
+    selectedFaceEmoji = '🐱';
+    selectedAnimalId = null;
+    wardrobeUnlocked = {};
+    characterEquipped = {'hat': null, 'top': null, 'bottom': null, 'accessory': null};
+    roomEquipped = {'wall': null, 'desk': null, 'floor': null, 'window': null};
+    categoryCounts = {};
+    aiDecoItems = [];
+    placedRoomItemIds = {};
+    roomItemPositions = {};
+    roomItemScales = {};
+    homeWeekNumber = 0;
+    homeWeekFitId = null;
+    homeWeekDareId = null;
+    homeWeekCompletedIds = {};
+    homeWeekExcluded = {};
+    pendingLevelUp = null;
+  }
+
+  Map<String, dynamic> toJson() => {
+    'points': points,
+    'totalEarned': totalEarned,
+    'completedIds': completedIds,
+    'unlockedIds': unlockedIds.toList(),
+    'preferredKeywordLabels': preferredKeywordLabels,
+    'equipped': equipped,
+    'selectedFaceEmoji': selectedFaceEmoji,
+    'selectedAnimalId': selectedAnimalId,
+    'wardrobeUnlocked': wardrobeUnlocked.toList(),
+    'characterEquipped': characterEquipped,
+    'roomEquipped': roomEquipped,
+    'categoryCounts': categoryCounts.map((k, v) => MapEntry(k.name, v)),
+    'aiDecoItems': aiDecoItems.map((d) => d.toJson()).toList(),
+    'placedRoomItemIds': placedRoomItemIds.toList(),
+    'roomItemPositions': roomItemPositions.map(
+      (k, v) => MapEntry(k, {'dx': v.dx, 'dy': v.dy}),
+    ),
+    'roomItemScales': roomItemScales,
+    'homeWeekNumber': homeWeekNumber,
+    'homeWeekFitId': homeWeekFitId,
+    'homeWeekDareId': homeWeekDareId,
+    'homeWeekCompletedIds': homeWeekCompletedIds.toList(),
+    'homeWeekExcluded': homeWeekExcluded.toList(),
+  };
+
+  void loadFromJson(Map<String, dynamic> j) {
+    points = (j['points'] as int?) ?? 0;
+    totalEarned = (j['totalEarned'] as int?) ?? 0;
+    completedIds = List<String>.from(j['completedIds'] ?? []);
+    unlockedIds = Set<String>.from(j['unlockedIds'] ?? []);
+    preferredKeywordLabels = List<String>.from(j['preferredKeywordLabels'] ?? []);
+
+    final eq = j['equipped'] as Map?;
+    if (eq != null) equipped = eq.map((k, v) => MapEntry(k as String, v as String?));
+
+    selectedFaceEmoji = (j['selectedFaceEmoji'] as String?) ?? '🐱';
+    selectedAnimalId = j['selectedAnimalId'] as String?;
+    wardrobeUnlocked = Set<String>.from(j['wardrobeUnlocked'] ?? []);
+
+    final ceq = j['characterEquipped'] as Map?;
+    if (ceq != null) characterEquipped = ceq.map((k, v) => MapEntry(k as String, v as String?));
+
+    final req = j['roomEquipped'] as Map?;
+    if (req != null) roomEquipped = req.map((k, v) => MapEntry(k as String, v as String?));
+
+    categoryCounts = {};
+    (j['categoryCounts'] as Map? ?? {}).forEach((k, v) {
+      try {
+        final cat = ExperienceCategory.values.firstWhere((e) => e.name == k);
+        categoryCounts[cat] = v as int;
+      } catch (_) {}
+    });
+
+    aiDecoItems = (j['aiDecoItems'] as List? ?? [])
+        .map((d) => DecoItem.fromJson(d as Map<String, dynamic>))
+        .toList();
+
+    placedRoomItemIds = Set<String>.from(j['placedRoomItemIds'] ?? []);
+
+    roomItemPositions = {};
+    (j['roomItemPositions'] as Map? ?? {}).forEach((k, v) {
+      final m = v as Map;
+      roomItemPositions[k as String] =
+          Offset((m['dx'] as num).toDouble(), (m['dy'] as num).toDouble());
+    });
+
+    roomItemScales = {};
+    (j['roomItemScales'] as Map? ?? {}).forEach((k, v) {
+      roomItemScales[k as String] = (v as num).toDouble();
+    });
+
+    homeWeekNumber = (j['homeWeekNumber'] as int?) ?? 0;
+    homeWeekFitId = j['homeWeekFitId'] as String?;
+    homeWeekDareId = j['homeWeekDareId'] as String?;
+    homeWeekCompletedIds = Set<String>.from(j['homeWeekCompletedIds'] ?? []);
+    homeWeekExcluded = Set<String>.from(j['homeWeekExcluded'] ?? []);
+    pendingLevelUp = null;
+  }
 }
