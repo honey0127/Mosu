@@ -52,3 +52,4 @@ lib/services/deco_ai_service.dart
 
 # Nested directory with its own git repo
 /Mosu/
+lib/services/deco_ai_service.dart

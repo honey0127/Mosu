@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../models/models.dart';
-import '../shell/main_shell.dart';
 
 /// 캐릭터 베이스 동물 선택 화면.
 /// 처음 '내 공간' 진입 시 자동 호출되며, 이후 아바타 옆 '동물 바꾸기' 버튼으로도 진입 가능.
@@ -38,32 +37,13 @@ class _AnimalPickerScreenState extends State<AnimalPickerScreen> {
   Widget build(BuildContext context) {
     final selected = animalById(_selectedId);
 
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) return;
-        // 시스템 백·제스처 포함 — 첫 진입에서 선택 없이 닫혔으면 홈으로
-        if (widget.isFirstTime && AppState.i.selectedAnimalId == null) {
-          MainShell.goToTab(0);
-        }
-      },
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: const Color(0xFFF2F2F0),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF2F2F0),
         foregroundColor: Colors.black87,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Icon(widget.isFirstTime ? Icons.close : Icons.arrow_back),
-          onPressed: () {
-            Navigator.of(context).pop();
-            // 첫 진입에서 동물 선택 없이 닫으면 → 홈 탭으로
-            if (widget.isFirstTime && AppState.i.selectedAnimalId == null) {
-              MainShell.goToTab(0);
-            }
-          },
-        ),
         title: Text(
           widget.isFirstTime ? '캐릭터 선택' : '동물 바꾸기',
           style: const TextStyle(fontWeight: FontWeight.w700),
@@ -214,7 +194,6 @@ class _AnimalPickerScreenState extends State<AnimalPickerScreen> {
           ],
         ),
       ),
-    ),
     );
   }
 }

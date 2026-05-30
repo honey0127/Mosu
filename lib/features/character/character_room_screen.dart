@@ -6,14 +6,14 @@ import '../../models/app_state.dart';
 import '../../models/wardrobe_item.dart';
 
 // ── 팔레트 ────────────────────────────────────────────────────────────────────
-const _primary  = Color(0xFF7F77DD);
-const _primary2 = Color(0xFF534AB7);
-const _bgPage   = Color(0xFFF7F5FF);
+const _primary  = Color(0xFF7DB879);
+const _primary2 = Color(0xFF5A9A4A);
+const _bgPage   = Color(0xFFF2F2F0);
 const _bgCard   = Color(0xFFFFFFFF);
-const _bgSoft   = Color(0xFFEEEDFE);
-const _textMain = Color(0xFF2B2665);
+const _bgSoft   = Color(0xFFE8F3E3);
+const _textMain = Color(0xFF1A1A1A);
 const _textSub  = Color(0xFF8E8E93);
-const _border   = Color(0xFFDEDCF8);
+const _border   = Color(0xFFDDDDDD);
 
 // 기본 방 색상
 const _wallDefault  = Color(0xFFF5EFE4);
