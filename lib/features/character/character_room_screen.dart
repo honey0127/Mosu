@@ -722,30 +722,35 @@ class _RoomEditTab extends StatefulWidget {
 class _RoomEditTabState extends State<_RoomEditTab> {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // 인터랙티브 방 캔버스
-        Expanded(
-          flex: 5,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: _InteractiveRoomCanvas(
-                avatarController: widget.avatarController,
-                onChanged: () => setState(() {}),
+    return LayoutBuilder(builder: (context, constraints) {
+      // 방 캔버스는 크고 고정 — 아래 꾸미기 영역만 스크롤
+      final canvasH = (constraints.maxHeight * 0.55).clamp(300.0, 420.0);
+      return Column(
+        children: [
+          // 인터랙티브 방 캔버스 (고정 높이)
+          SizedBox(
+            height: canvasH,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: _InteractiveRoomCanvas(
+                  avatarController: widget.avatarController,
+                  onChanged: () => setState(() {}),
+                ),
               ),
             ),
           ),
-        ),
-        // 소품 팔레트
-        Container(
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: _border)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          // 소품/구조/테마 — 스크롤 영역
+          Expanded(
+            child: SingleChildScrollView(
+              child: Container(
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: _border)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Text('방 구조',
@@ -763,13 +768,16 @@ class _RoomEditTabState extends State<_RoomEditTab> {
                 child: Text('방 테마 선택',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _textSub)),
               ),
-              _ThemePickerRow(onChanged: () => setState(() {})),
-              const SizedBox(height: 8),
-            ],
+                    _ThemePickerRow(onChanged: () => setState(() {})),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }
 
@@ -1209,16 +1217,6 @@ class _InteractiveRoomCanvas extends StatefulWidget {
 }
 
 class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
-  String? _selectedId;
-
-  void _changeScale(String id, double delta) {
-    final state = AppState.i;
-    final cur = state.roomItemScales[id] ?? 1.0;
-    state.updateRoomItemScale(id, (cur + delta).clamp(0.5, 3.0));
-    widget.onChanged();
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = AppState.i;
@@ -1228,13 +1226,6 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
         .whereType<DecoItem>()
         .toList();
 
-    // 선택된 아이템이 더 이상 배치돼 있지 않으면 선택 해제
-    if (_selectedId != null && !state.placedRoomItemIds.contains(_selectedId)) {
-      _selectedId = null;
-    }
-    final selectedItem =
-        placed.where((it) => it.id == _selectedId).firstOrNull;
-
     return LayoutBuilder(builder: (ctx, constraints) {
       final w = constraints.maxWidth;
       final h = constraints.maxHeight;
@@ -1243,13 +1234,6 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
         child: Stack(
           clipBehavior: Clip.hardEdge,
           children: [
-            // 빈 공간 탭 → 선택 해제
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: () => setState(() => _selectedId = null),
-              ),
-            ),
             // 바닥
             Positioned(
               bottom: 0, left: 0, right: 0,
@@ -1285,28 +1269,27 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
                 child: _DeskFixture(width: w * 0.30, height: h * 0.22, theme: theme),
               ),
 
-            // 캐릭터 (바닥 중앙) — 중간 크기
+            // 캐릭터 (바닥 중앙) — 배경 원 제거(투명)
             Positioned(
-              bottom: h * 0.30,
+              bottom: h * 0.28,
               left: 0, right: 0,
               child: Center(
-                child: SizedBox(
-                  width: 88, height: 118,
-                  child: AvatarMakerAvatar(controller: widget.avatarController),
+                child: AvatarMakerAvatar(
+                  controller: widget.avatarController,
+                  radius: 70,
+                  backgroundColor: Colors.transparent,
                 ),
               ),
             ),
-            // 배치된 소품들 (드래그 가능)
+            // 배치된 소품들 (드래그 이동 · 두 손가락으로 크기 조절)
             for (final item in placed)
               _DraggableRoomItem(
                 key: ValueKey(item.id),
                 item: item,
                 canvasWidth: w,
                 canvasHeight: h,
-                isSelected: _selectedId == item.id,
                 position: state.roomItemPositions[item.id] ?? const Offset(0.15, 0.3),
                 scale: state.roomItemScales[item.id] ?? 1.0,
-                onSelect: () => setState(() => _selectedId = item.id),
                 onMoved: (pos) {
                   state.moveRoomItem(item.id, pos);
                   widget.onChanged();
@@ -1317,26 +1300,24 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
                 },
                 onRemove: () {
                   state.removeRoomItem(item.id);
-                  setState(() => _selectedId = null);
+                  setState(() {});
                   widget.onChanged();
                 },
               ),
 
-            // ── 선택된 소품 크기 조절 바 ──────────────────────────────
-            if (selectedItem != null)
+            // ── 조작 안내 ─────────────────────────────────────────────
+            if (placed.isNotEmpty)
               Positioned(
                 bottom: 8, left: 0, right: 0,
                 child: Center(
-                  child: _ItemSizeBar(
-                    name: selectedItem.name,
-                    scale: state.roomItemScales[selectedItem.id] ?? 1.0,
-                    onDecrease: () => _changeScale(selectedItem.id, -0.2),
-                    onIncrease: () => _changeScale(selectedItem.id, 0.2),
-                    onRemove: () {
-                      state.removeRoomItem(selectedItem.id);
-                      setState(() => _selectedId = null);
-                      widget.onChanged();
-                    },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('드래그로 이동 · 두 손가락으로 크기 조절 · 길게 눌러 삭제',
+                        style: TextStyle(fontSize: 9, color: _textSub)),
                   ),
                 ),
               ),
@@ -1344,93 +1325,6 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
         ),
       );
     });
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  선택된 소품 크기 조절 바
-// ══════════════════════════════════════════════════════════════════════════════
-class _ItemSizeBar extends StatelessWidget {
-  final String name;
-  final double scale;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
-  final VoidCallback onRemove;
-  const _ItemSizeBar({
-    required this.name,
-    required this.scale,
-    required this.onDecrease,
-    required this.onIncrease,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _primary, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 80),
-            child: Text(name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: _textMain)),
-          ),
-          const SizedBox(width: 8),
-          _CircleBtn(icon: Icons.remove, onTap: onDecrease),
-          SizedBox(
-            width: 42,
-            child: Text('${(scale * 100).round()}%',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: _primary2)),
-          ),
-          _CircleBtn(icon: Icons.add, onTap: onIncrease),
-          const SizedBox(width: 6),
-          Container(width: 1, height: 18, color: _border),
-          const SizedBox(width: 6),
-          _CircleBtn(icon: Icons.delete_outline, onTap: onRemove, danger: true),
-        ],
-      ),
-    );
-  }
-}
-
-class _CircleBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool danger;
-  const _CircleBtn({required this.icon, required this.onTap, this.danger = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 30, height: 30,
-        decoration: BoxDecoration(
-          color: danger ? const Color(0xFFFCE4E4) : _bgSoft,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon,
-            size: 18, color: danger ? const Color(0xFFD9534F) : _primary2),
-      ),
-    );
   }
 }
 
@@ -1443,8 +1337,6 @@ class _DraggableRoomItem extends StatefulWidget {
   final double canvasHeight;
   final Offset position;
   final double scale;
-  final bool isSelected;
-  final VoidCallback onSelect;
   final void Function(Offset) onMoved;
   final void Function(double) onScaleUpdate;
   final VoidCallback onRemove;
@@ -1456,8 +1348,6 @@ class _DraggableRoomItem extends StatefulWidget {
     required this.canvasHeight,
     required this.position,
     required this.scale,
-    required this.isSelected,
-    required this.onSelect,
     required this.onMoved,
     required this.onScaleUpdate,
     required this.onRemove,
@@ -1497,14 +1387,12 @@ class _DraggableRoomItemState extends State<_DraggableRoomItem> {
     final x = (_pos.dx * widget.canvasWidth).clamp(0.0, widget.canvasWidth - itemSize);
     final y = (_pos.dy * widget.canvasHeight).clamp(0.0, widget.canvasHeight - itemSize);
 
-    final highlight = _dragging || widget.isSelected;
+    final highlight = _dragging;
 
     return Positioned(
       left: x, top: y,
       child: GestureDetector(
-        onTap: widget.onSelect,
         onScaleStart: (details) {
-          widget.onSelect();
           setState(() {
             _dragging = true;
             _baseScale = _scale;
