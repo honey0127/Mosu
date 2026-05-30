@@ -3,10 +3,8 @@ import '../../data/experience_data.dart';
 import '../../models/app_state.dart';
 import '../../models/experience.dart';
 import '../../models/keyword.dart';
-import '../../services/auth_service.dart'; // UserProfile 포함
+import '../../services/auth_service.dart';
 
-/// 마이 → 캘린더 탭 하단에 표시되는 성장 리포트 카드.
-/// 온보딩 프로필·초기 키워드·완료 경험을 분석해 짧은 성장 문장을 생성한다.
 class GrowthReportCard extends StatelessWidget {
   const GrowthReportCard({super.key});
 
@@ -46,7 +44,9 @@ class GrowthReportCard extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF7DB879).withOpacity(0.3)),
+        border: Border.all(
+          color: const Color(0xFF7DB879).withOpacity(0.3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +59,10 @@ class GrowthReportCard extends StatelessWidget {
                   color: const Color(0xFF7DB879).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('🌱', style: TextStyle(fontSize: 20)),
+                child: const Text(
+                  '\u{1F331}',
+                  style: TextStyle(fontSize: 20),
+                ),
               ),
               const SizedBox(width: 12),
               const Column(
@@ -100,30 +103,30 @@ class GrowthReportCard extends StatelessWidget {
     final selectedLabels = selectedKeywords.map((k) => k.label).toSet();
     final selectedCategories = selectedKeywords.map((k) => k.category).toSet();
 
-    // ── 내향 → 외향 성장 ──────────────────────────────────────────────────────
     final wasIntrovert = profile != null && profile.mbti[0] == 'I';
     final preferredAlone =
-        selectedLabels.contains('혼자') || selectedLabels.contains('조용한');
-    final socialCount = (categoryCounts[ExperienceCategory.social] ?? 0);
-    final travelCount = (categoryCounts[ExperienceCategory.travel] ?? 0);
+        selectedLabels.contains('혼자') ||
+        selectedLabels.contains('조용한');
+    final socialCount = categoryCounts[ExperienceCategory.social] ?? 0;
+    final travelCount = categoryCounts[ExperienceCategory.travel] ?? 0;
 
     if ((wasIntrovert || preferredAlone) && socialCount + travelCount >= 2) {
       final topSocial = completedExps
           .where((e) =>
               e.category == ExperienceCategory.social ||
               e.category == ExperienceCategory.travel)
-          .take(1)
           .firstOrNull;
       final expTitle = topSocial?.title ?? '새로운 만남';
-      final introLabel = wasIntrovert ? ‘내향적인 성향이셨지만’ : ‘혼자를 좋아하셨지만’;
+      final introLabel = wasIntrovert
+          ? '내향적인 성향이셨지만'
+          : '혼자를 좋아하셨지만';
       messages.add(_GrowthMessage(
-        emoji: ‘🤝’,
-        text: ‘$introLabel 「$expTitle」 등의 경험을 통해 ‘
-            ‘사람과 연결되는 즐거움을 발견하셨어요.’,
+        emoji: '\u{1F91D}',
+        text: '$introLabel 「$expTitle」 등의 경험을 통해 '
+            '사람과 연결되는 즐거움을 발견하셨어요.',
       ));
     }
 
-    // ── 안전지대 → 도전 성장 ──────────────────────────────────────────────────
     final preferredSafe = selectedLabels.contains('느린') ||
         selectedLabels.contains('조용한') ||
         !selectedCategories.contains('challenge');
@@ -133,57 +136,58 @@ class GrowthReportCard extends StatelessWidget {
     if (preferredSafe && hardCount >= 1) {
       final hardExp = completedExps
           .where((e) => e.difficulty == Difficulty.hard)
-          .take(1)
           .firstOrNull;
-      final hardTitle = hardExp?.title ?? '어려운 도전';
+      final hardTitle =
+          hardExp?.title ?? '어려운 도전';
       messages.add(_GrowthMessage(
-        emoji: '🔥',
-        text: '평소엔 안정적인 루틴을 선호하셨는데 「$hardTitle」 같은 '
-            '높은 난이도 경험에도 도전하며 용기 있는 모습을 보여주셨어요.',
+        emoji: '\u{1F525}',
+        text: '평소엔 안정적인 루틴을 선호하셨는데 '
+            '「$hardTitle」 같은 높은 난이도 경험에도 '
+            '도전하며 용기 있는 모습을 보여주셨어요.',
       ));
     }
 
-    // ── 익숙한 곳 → 낯선 탐험 성장 ───────────────────────────────────────────
-    final preferredFamiliar = !selectedLabels.contains('낯선 곳') &&
+    final preferredFamiliar =
+        !selectedLabels.contains('낯선 곳') &&
         !selectedLabels.contains('낯선 사람') &&
         !selectedLabels.contains('무계획');
     final dareExps = completedExps.where((e) => !e.isFit).length;
 
     if (preferredFamiliar && dareExps >= 2) {
       final dareExp =
-          completedExps.where((e) => !e.isFit).take(1).firstOrNull;
-      final dareTitle = dareExp?.title ?? '낯선 경험';
+          completedExps.where((e) => !e.isFit).firstOrNull;
+      final dareTitle =
+          dareExp?.title ?? '낯선 경험';
       messages.add(_GrowthMessage(
-        emoji: '🗺️',
-        text: '익숙한 것을 선호하셨지만 「$dareTitle」처럼 '
+        emoji: '\u{1F5FA}️',
+        text: '익숙한 것을 선호하셨지만 '
+            '「$dareTitle」처럼 '
             '예상치 못한 경험들을 통해 탐험가 기질이 커지고 있어요.',
       ));
     }
 
-    // ── 특정 장소 키워드 vs 실제 완료 경험 (골목, 자연 등) ────────────────────
-    final likedGolmok = selectedLabels.contains('골목');
-    final likedNature =
-        selectedLabels.contains('자연') || selectedLabels.contains('바닷가');
+    final likedGolmok =
+        selectedLabels.contains('골목');
+    final likedNature = selectedLabels.contains('자연') ||
+        selectedLabels.contains('바닷가');
     final natureCount = categoryCounts[ExperienceCategory.nature] ?? 0;
 
     if (likedGolmok && natureCount >= 1) {
       messages.add(_GrowthMessage(
-        emoji: '🌿',
-        text:
-            '골목길을 좋아하시는 분이 자연 속 경험까지 넓혀가고 계세요. '
+        emoji: '\u{1F33F}',
+        text: '골목길을 좋아하시는 분이 자연 속 경험까지 넓혀가고 계세요. '
             '공간의 경계가 점점 넓어지고 있어요.',
       ));
     } else if (likedNature && socialCount >= 2) {
       messages.add(_GrowthMessage(
-        emoji: '🌊',
-        text:
-            '자연과 혼자만의 시간을 즐기시던 분이 '
+        emoji: '\u{1F30A}',
+        text: '자연과 혼자만의 시간을 즐기시던 분이 '
             '사람들과 함께하는 경험도 쌓아가고 계세요.',
       ));
     }
 
-    // ── 창작·취미 성장 ────────────────────────────────────────────────────────
-    final creativeCount = (categoryCounts[ExperienceCategory.creative] ?? 0) +
+    final creativeCount =
+        (categoryCounts[ExperienceCategory.creative] ?? 0) +
         (categoryCounts[ExperienceCategory.hobby] ?? 0);
     final likedCreative = selectedLabels.contains('만들기') ||
         selectedLabels.contains('감성적') ||
@@ -195,21 +199,18 @@ class GrowthReportCard extends StatelessWidget {
 
     if (!likedCreative && creativeCount >= 2) {
       messages.add(_GrowthMessage(
-        emoji: '🎨',
-        text:
-            '처음엔 창작 활동에 관심이 없으셨지만 '
+        emoji: '\u{1F3A8}',
+        text: '처음엔 창작 활동에 관심이 없으셨지만 '
             '경험을 통해 만들고 표현하는 즐거움을 찾아가고 계세요.',
       ));
     }
 
-    // ── 전반적 성장 요약 (다른 메시지가 없을 때) ──────────────────────────────
     if (messages.isEmpty) {
       final mostDone = _topCategory(categoryCounts);
       if (mostDone != null) {
         messages.add(_GrowthMessage(
           emoji: mostDone.emoji,
-          text:
-              '${completedExps.length}개의 경험을 완료하며 꾸준히 성장 중이에요. '
+          text: '${completedExps.length}개의 경험을 완료하며 꾸준히 성장 중이에요. '
               '특히 ${mostDone.label} 분야에서 자신만의 색깔을 발견하고 계세요.',
         ));
       }
