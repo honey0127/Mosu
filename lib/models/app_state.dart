@@ -65,6 +65,7 @@ class AppState {
   String? homeWeekDareId;
   Set<String> homeWeekCompletedIds = {};
   Set<String> homeWeekExcluded = {}; // 네 버튼 시 새 페어 선택에서 제외할 ID
+  int? pendingLevelUp;               // 홈 화면에서 레벨업 폭죽 표시용
 
   void setWeeklyPair({
     required int weekNum,
