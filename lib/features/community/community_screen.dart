@@ -330,7 +330,7 @@ class _CreateRoomDialog extends StatefulWidget {
 class _CreateRoomDialogState extends State<_CreateRoomDialog> {
   final _name = TextEditingController();
   final _goal = TextEditingController();
-  int _max = 50;
+  final int _max = 10;
 
   @override
   void dispose() {
@@ -363,17 +363,12 @@ class _CreateRoomDialogState extends State<_CreateRoomDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          const Row(
             children: [
-              const Text('최대 인원', style: TextStyle(fontSize: 13)),
-              const Spacer(),
-              DropdownButton<int>(
-                value: _max,
-                items: const [10, 20, 50, 100]
-                    .map((n) => DropdownMenuItem(value: n, child: Text('$n명')))
-                    .toList(),
-                onChanged: (v) => setState(() => _max = v ?? 50),
-              ),
+              Text('최대 인원', style: TextStyle(fontSize: 13)),
+              Spacer(),
+              Text('10명',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
             ],
           ),
         ],
