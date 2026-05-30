@@ -100,4 +100,9 @@ class AppState {
         newlyUnlocked.add(item);
       }
     }
-    return newl
+    return newlyUnlocked;
+  }
+}
+
+// 기존 DecoItem 상점 목록 (비어있음)
+const List<DecoItem> allItems = [];

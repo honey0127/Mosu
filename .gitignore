@@ -48,4 +48,8 @@ app.*.map.json
 .claude/
 
 # API 키 포함 파일 — 절대 커밋 금지
-lib/services/deco_ai_service.dart
+lib/services/deco_ai_service.dart
+
+# Nested directory with its own git repo
+/Mosu/
+lib/services/deco_ai_service.dart

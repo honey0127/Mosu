@@ -102,4 +102,9 @@ class DecoAiService {
     if (blockMatch != null) return blockMatch.group(1)!;
     final start = text.indexOf('{');
     final end = text.lastIndexOf('}');
-    if (start != -1 &
+    if (start != -1 && end != -1 && end > start) {
+      return text.substring(start, end + 1);
+    }
+    return text;
+  }
+}

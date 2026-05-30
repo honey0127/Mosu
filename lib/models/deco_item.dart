@@ -20,4 +20,6 @@ class DecoItem {
     required this.slot,
     required this.hint,
     this.isAiGenerated = false,
-    this.dimension = SelfDimens
+    this.dimension = SelfDimension.internal,
+  });
+}

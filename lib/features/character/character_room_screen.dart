@@ -1266,4 +1266,34 @@ class _EmptySlot extends StatelessWidget {
             Text(
               dimension == SelfDimension.external
                   ? '경험을 완료하면\nAI가 캐릭터 아이템을 생성해줘요 ✨'
-                  : '경�
+                  : '경험을 완료하면\nAI가 방 소품을 생성해줘요 ✨',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: _textSub, height: 1.6),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  빈 슬롯 필
+// ══════════════════════════════════════════════════════════════════════════════
+class _EmptySlotPill extends StatelessWidget {
+  final String label;
+  const _EmptySlotPill({required this.label, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _bgSoft,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _border),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 10, color: _textSub)),
+    );
+  }
+}
