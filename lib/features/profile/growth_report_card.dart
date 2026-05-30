@@ -115,12 +115,11 @@ class GrowthReportCard extends StatelessWidget {
           .take(1)
           .firstOrNull;
       final expTitle = topSocial?.title ?? '새로운 만남';
+      final introLabel = wasIntrovert ? ‘내향적인 성향이셨지만’ : ‘혼자를 좋아하셨지만’;
       messages.add(_GrowthMessage(
-        emoji: '🤝',
-        text:
-            '${wasIntrovert ? '내향적인 성향이셨지만' : '혼자를 좋아하셨지만'} '
-            ''$expTitle' 등의 경험을 통해 '
-            '사람과 연결되는 즐거움을 발견하셨어요.',
+        emoji: ‘🤝’,
+        text: ‘$introLabel 「$expTitle」 등의 경험을 통해 ‘
+            ‘사람과 연결되는 즐거움을 발견하셨어요.’,
       ));
     }
 
@@ -136,12 +135,11 @@ class GrowthReportCard extends StatelessWidget {
           .where((e) => e.difficulty == Difficulty.hard)
           .take(1)
           .firstOrNull;
+      final hardTitle = hardExp?.title ?? '어려운 도전';
       messages.add(_GrowthMessage(
         emoji: '🔥',
-        text:
-            '평소엔 안정적인 루틴을 선호하셨는데 '
-            ''${hardExp?.title ?? '어려운 도전'}' 같은 높은 난이도 경험에도 '
-            '도전하며 용기 있는 모습을 보여주셨어요.',
+        text: '평소엔 안정적인 루틴을 선호하셨는데 「$hardTitle」 같은 '
+            '높은 난이도 경험에도 도전하며 용기 있는 모습을 보여주셨어요.',
       ));
     }
 
@@ -154,11 +152,10 @@ class GrowthReportCard extends StatelessWidget {
     if (preferredFamiliar && dareExps >= 2) {
       final dareExp =
           completedExps.where((e) => !e.isFit).take(1).firstOrNull;
+      final dareTitle = dareExp?.title ?? '낯선 경험';
       messages.add(_GrowthMessage(
         emoji: '🗺️',
-        text:
-            '익숙한 것을 선호하셨지만 '
-            ''${dareExp?.title ?? '낯선 경험'}'처럼 '
+        text: '익숙한 것을 선호하셨지만 「$dareTitle」처럼 '
             '예상치 못한 경험들을 통해 탐험가 기질이 커지고 있어요.',
       ));
     }
