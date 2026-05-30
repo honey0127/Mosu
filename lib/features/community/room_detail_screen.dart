@@ -388,6 +388,14 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             final iAmOwner = myRole == 'owner';
             final iAmAdmin = myRole == 'owner' || myRole == 'admin';
 
+            // 최근 7일 안에 제출해 방장·관리자에게 승인받은 멤버 → 미션 완료 배지
+            final now = DateTime.now();
+            final missionDoneIds = verifs
+                .where((v) =>
+                    v.isApproved && now.difference(v.createdAt).inDays < 7)
+                .map((v) => v.userId)
+                .toSet();
+
             // 멤버별 최근(승인된 것 우선) 인증 = 그 사람의 "활동"
             Verification? latestFor(String uid) {
               Verification? best;
@@ -508,6 +516,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                   (m) => _MemberTile(
                     member: m,
                     isMe: m.userId == myId,
+                    missionDone: missionDoneIds.contains(m.userId),
                     canManage:
                         iAmOwner && m.role != 'owner' && m.userId != myId,
                     onSetRole: (role) => _changeRole(m.userId, role),
@@ -960,11 +969,13 @@ class _ActivityCell extends StatelessWidget {
 class _MemberTile extends StatelessWidget {
   final RoomMember member;
   final bool isMe;
+  final bool missionDone;
   final bool canManage;
   final void Function(String role)? onSetRole;
   const _MemberTile({
     required this.member,
     required this.isMe,
+    this.missionDone = false,
     this.canManage = false,
     this.onSetRole,
   });
@@ -975,7 +986,20 @@ class _MemberTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: _avatar(name),
-      title: Text(isMe ? '$name (나)' : name),
+      title: Row(
+        children: [
+          Flexible(
+            child: Text(
+              isMe ? '$name (나)' : name,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (missionDone) ...[
+            const SizedBox(width: 8),
+            const _MissionDoneBanner(),
+          ],
+        ],
+      ),
       trailing: _trailing(),
     );
   }
@@ -1048,6 +1072,37 @@ class _MemberTile extends StatelessWidget {
           color: AppColors.primary,
           fontWeight: FontWeight.w700,
         ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── 미션 완료 배너 ─────────────────────────────────
+class _MissionDoneBanner extends StatelessWidget {
+  const _MissionDoneBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.emoji_events_rounded, size: 13, color: Colors.white),
+          SizedBox(width: 3),
+          Text(
+            '미션 완료!',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ),
     );
   }
