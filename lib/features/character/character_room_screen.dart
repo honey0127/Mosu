@@ -1176,6 +1176,7 @@ class _WardrobeGridState extends State<_WardrobeGrid> {
                       child: _WardrobeItemCell(
                         emoji: emoji, name: name,
                         isSelected: isEquipped, isAi: isAi,
+                        imageUrl: isAi ? aiItems.where((it) => it.id == id).firstOrNull?.imageUrl : null,
                       ),
                     );
                   },
@@ -1194,12 +1195,14 @@ class _WardrobeItemCell extends StatelessWidget {
   final String name;
   final bool isSelected;
   final bool isAi;
+  final String? imageUrl;
 
   const _WardrobeItemCell({
     required this.emoji,
     required this.name,
     this.isSelected = false,
     this.isAi = false,
+    this.imageUrl,
   });
 
   @override
@@ -1221,7 +1224,18 @@ class _WardrobeItemCell extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 34)),
+              imageUrl != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        imageUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Text(emoji, style: const TextStyle(fontSize: 34)),
+                      ),
+                    )
+                  : Text(emoji, style: const TextStyle(fontSize: 34)),
               if (isAi)
                 Positioned(
                   right: -4, top: -4,
@@ -1367,8 +1381,13 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
                 canvasWidth: w,
                 canvasHeight: h,
                 position: state.roomItemPositions[item.id] ?? const Offset(0.15, 0.3),
+                scale: state.roomItemScales[item.id] ?? 1.0,
                 onMoved: (pos) {
                   state.moveRoomItem(item.id, pos);
+                  widget.onChanged();
+                },
+                onScaleUpdate: (s) {
+                  state.updateRoomItemScale(item.id, s);
                   widget.onChanged();
                 },
                 onRemove: () {
@@ -1376,19 +1395,6 @@ class _InteractiveRoomCanvasState extends State<_InteractiveRoomCanvas> {
                   setState(() {});
                   widget.onChanged();
                 },
-              ),
-            // 빈 상태 안내
-            if (placed.isEmpty)
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Text('🏠', style: TextStyle(fontSize: 40)),
-                    SizedBox(height: 8),
-                    Text('아래 소품을 탭해서 방에 배치해보세요',
-                        style: TextStyle(fontSize: 12, color: _textSub)),
-                  ],
-                ),
               ),
           ],
         ),
@@ -1405,7 +1411,9 @@ class _DraggableRoomItem extends StatefulWidget {
   final double canvasWidth;
   final double canvasHeight;
   final Offset position;
+  final double scale;
   final void Function(Offset) onMoved;
+  final void Function(double) onScaleUpdate;
   final VoidCallback onRemove;
 
   const _DraggableRoomItem({
@@ -1414,7 +1422,9 @@ class _DraggableRoomItem extends StatefulWidget {
     required this.canvasWidth,
     required this.canvasHeight,
     required this.position,
+    required this.scale,
     required this.onMoved,
+    required this.onScaleUpdate,
     required this.onRemove,
   });
 
@@ -1424,58 +1434,86 @@ class _DraggableRoomItem extends StatefulWidget {
 
 class _DraggableRoomItemState extends State<_DraggableRoomItem> {
   late Offset _pos;
+  late double _scale;
   bool _dragging = false;
+  double _baseScale = 1.0;
 
   @override
   void initState() {
     super.initState();
     _pos = widget.position;
+    _scale = widget.scale;
   }
 
   @override
   void didUpdateWidget(_DraggableRoomItem old) {
     super.didUpdateWidget(old);
-    if (!_dragging) _pos = widget.position;
+    if (!_dragging) {
+      _pos = widget.position;
+      _scale = widget.scale;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    const itemSize = 48.0;
+    final baseSize = 54.0;
+    final itemSize = baseSize * _scale;
+    
     final x = (_pos.dx * widget.canvasWidth).clamp(0.0, widget.canvasWidth - itemSize);
     final y = (_pos.dy * widget.canvasHeight).clamp(0.0, widget.canvasHeight - itemSize);
 
     return Positioned(
       left: x, top: y,
       child: GestureDetector(
-        onPanStart: (_) => setState(() => _dragging = true),
-        onPanUpdate: (d) {
+        onScaleStart: (details) {
           setState(() {
-            final nx = (_pos.dx + d.delta.dx / widget.canvasWidth).clamp(0.0, 1.0);
-            final ny = (_pos.dy + d.delta.dy / widget.canvasHeight).clamp(0.0, 1.0);
-            _pos = Offset(nx, ny);
+            _dragging = true;
+            _baseScale = _scale;
           });
         },
-        onPanEnd: (_) {
+        onScaleUpdate: (details) {
+          setState(() {
+            // 위치 업데이트 (드래그)
+            if (details.pointerCount == 1) {
+              final nx = (_pos.dx + details.focalPointDelta.dx / widget.canvasWidth).clamp(0.0, 1.0);
+              final ny = (_pos.dy + details.focalPointDelta.dy / widget.canvasHeight).clamp(0.0, 1.0);
+              _pos = Offset(nx, ny);
+            } 
+            // 크기 업데이트 (핀치 줌)
+            if (details.pointerCount == 2) {
+              _scale = (_baseScale * details.scale).clamp(0.5, 3.0);
+            }
+          });
+        },
+        onScaleEnd: (_) {
           setState(() => _dragging = false);
           widget.onMoved(_pos);
+          widget.onScaleUpdate(_scale);
         },
         onLongPress: widget.onRemove,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 80),
           width: itemSize, height: itemSize,
           decoration: BoxDecoration(
-            color: _dragging ? Colors.white.withOpacity(0.95) : Colors.white.withOpacity(0.75),
+            color: _dragging ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _dragging ? _primary : _border.withOpacity(0.5),
-              width: _dragging ? 2 : 1,
+              color: _dragging ? _primary.withValues(alpha: 0.5) : Colors.transparent,
+              width: _dragging ? 2 : 0,
             ),
-            boxShadow: _dragging
-                ? [BoxShadow(color: _primary.withOpacity(0.3), blurRadius: 12, spreadRadius: 1)]
-                : null,
           ),
           alignment: Alignment.center,
-          child: Text(widget.item.emoji, style: const TextStyle(fontSize: 28)),
+          child: widget.item.imageUrl != null
+              ? Image.network(
+                    widget.item.imageUrl!,
+                    width: itemSize,
+                    height: itemSize,
+                    fit: BoxFit.contain,
+                    color: Colors.white.withValues(alpha: 0.1),
+                    colorBlendMode: BlendMode.dstATop,
+                    errorBuilder: (_, __, ___) => Text(widget.item.emoji, style: TextStyle(fontSize: 28 * _scale)),
+                  )
+              : Text(widget.item.emoji, style: TextStyle(fontSize: 28 * _scale)),
         ),
       ),
     );
@@ -1534,7 +1572,18 @@ class _RoomItemPalette extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(item.emoji, style: const TextStyle(fontSize: 26)),
+                  item.imageUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(
+                            item.imageUrl!,
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Text(item.emoji, style: const TextStyle(fontSize: 26)),
+                          ),
+                        )
+                      : Text(item.emoji, style: const TextStyle(fontSize: 26)),
                   const SizedBox(height: 3),
                   Text(item.name,
                       maxLines: 1,

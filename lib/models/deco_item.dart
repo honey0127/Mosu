@@ -10,6 +10,8 @@ class DecoItem {
   final bool isAiGenerated;
   final SelfDimension dimension;
 
+  final String? imageUrl;
+
   const DecoItem({
     required this.id,
     required this.name,
@@ -19,5 +21,6 @@ class DecoItem {
     required this.hint,
     this.isAiGenerated = false,
     this.dimension = SelfDimension.internal,
+    this.imageUrl,
   });
 }

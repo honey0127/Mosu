@@ -75,6 +75,7 @@ class AppState {
   // ── 방 아이템 자유 배치 ───────────────────────────────────────────────────
   Set<String> placedRoomItemIds = {};
   Map<String, Offset> roomItemPositions = {};
+  Map<String, double> roomItemScales = {}; // 크기 배율 (0.5 ~ 2.5)
 
   void placeRoomItem(String id) {
     placedRoomItemIds.add(id);
@@ -85,6 +86,9 @@ class AppState {
         0.35 + (idx ~/ 4) * 0.15,
       );
     }
+    if (!roomItemScales.containsKey(id)) {
+      roomItemScales[id] = 1.0;
+    }
   }
 
   void removeRoomItem(String id) => placedRoomItemIds.remove(id);
@@ -94,6 +98,10 @@ class AppState {
       pos.dx.clamp(0.0, 1.0),
       pos.dy.clamp(0.0, 1.0),
     );
+  }
+
+  void updateRoomItemScale(String id, double scale) {
+    roomItemScales[id] = scale.clamp(0.5, 2.5);
   }
 
   // ── 주간 홈 경험 추적 ─────────────────────────────────────────────────────

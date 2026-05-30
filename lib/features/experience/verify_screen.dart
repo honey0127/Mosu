@@ -594,8 +594,19 @@ class _RewardDialog extends StatelessWidget {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Text(newDecoItem!.emoji,
-                              style: const TextStyle(fontSize: 36)),
+                          newDecoItem!.imageUrl != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    newDecoItem!.imageUrl!,
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => Text(newDecoItem!.emoji, style: const TextStyle(fontSize: 36)),
+                                  ),
+                                )
+                              : Text(newDecoItem!.emoji,
+                                  style: const TextStyle(fontSize: 36)),
                           const SizedBox(width: 12),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
