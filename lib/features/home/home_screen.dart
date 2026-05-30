@@ -440,10 +440,14 @@ class _ExpCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(exp.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                   fontSize: 17, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(exp.subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style:
               TextStyle(fontSize: 13, color: Colors.grey.shade500)),
           const SizedBox(height: 14),
@@ -643,10 +647,14 @@ class _CompletedCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(exp.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Text(exp.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                         fontSize: 12, color: Colors.grey.shade500)),
               ],

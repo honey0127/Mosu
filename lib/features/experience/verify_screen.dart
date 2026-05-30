@@ -242,6 +242,8 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(exp.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   fontWeight: FontWeight.w700, fontSize: 15)),
                           const SizedBox(height: 3),
@@ -364,6 +366,20 @@ class _VerifyScreenState extends State<VerifyScreen> {
                 ),
               ),
 
+              if (_photo == null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 14, color: Colors.red),
+                    const SizedBox(width: 4),
+                    Text('사진이 없습니다',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.red.shade600)),
+                  ],
+                ),
+              ],
+
               const SizedBox(height: 28),
 
               // ── 감정 태그 ──────────────────────────────────────────
@@ -410,6 +426,19 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   );
                 }).toList(),
               ),
+              if (_emotions.isEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 14, color: Colors.red),
+                    const SizedBox(width: 4),
+                    Text('감정을 선택해주세요',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.red.shade600)),
+                  ],
+                ),
+              ],
 
               const SizedBox(height: 28),
 
@@ -452,7 +481,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                   ),
-                  onPressed: _completed ? null : _complete,
+                  onPressed: (_completed || _photo == null || _emotions.isEmpty)
+                      ? null
+                      : _complete,
                   child: Text(
                     _completed
                         ? '완료됨! ✅'

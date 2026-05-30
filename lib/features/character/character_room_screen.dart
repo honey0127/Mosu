@@ -1138,6 +1138,8 @@ class _WardrobeGridState extends State<_WardrobeGrid> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(widget.slotLabels[s]!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
                                 color: sel ? Colors.white : _textSub)),
                         if (count > 0)

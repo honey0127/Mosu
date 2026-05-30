@@ -7,9 +7,10 @@ class AuthService {
   static const _kProfiles     = 'auth_profiles';
   static const _kOnboarding   = 'auth_onboarding_done';
   static const _kJoinDates    = 'auth_join_dates';
-  static const _kAvatars      = 'auth_avatars';            // HEAD(내 브랜치) 추가분
-  static const _kKeywordsDone = 'auth_keywords_done';      // Claude 브랜치 추가분
-  static const _kUserKeywords = 'auth_user_keywords';      // Claude 브랜치 추가분
+  static const _kAvatars      = 'auth_avatars';
+  static const _kKeywordsDone = 'auth_keywords_done';
+  static const _kUserKeywords = 'auth_user_keywords';
+  static const _kCurrentUser  = 'auth_current_user'; // 자동 로그인용
 
   /// 프로필 사진을 캐릭터(내 공간에서 만든 동물 얼굴)로 설정했을 때의 값.
   /// 이 값이 아니면서 null도 아니면 갤러리 사진 파일 경로로 해석한다.
@@ -93,9 +94,24 @@ class AuthService {
         _userKeywords[id] = List<String>.from(val as List);
       });
     }
+
+    // 마지막 로그인 유저 복원 (자동 로그인)
+    final savedUser = prefs.getString(_kCurrentUser);
+    if (savedUser != null && _users.containsKey(savedUser)) {
+      _currentUserId = savedUser;
+    }
   }
 
   // ── 저장 헬퍼 ─────────────────────────────────────────────────────────────
+
+  static Future<void> _saveCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_currentUserId != null) {
+      await prefs.setString(_kCurrentUser, _currentUserId!);
+    } else {
+      await prefs.remove(_kCurrentUser);
+    }
+  }
 
   static Future<void> _saveUsers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -154,6 +170,7 @@ class AuthService {
     if (user == null) return null;
     if (user['password'] != password) return null;
     _currentUserId = id;
+    _saveCurrentUser(); // 자동 로그인용 저장 (fire-and-forget)
     return user;
   }
 
@@ -167,6 +184,7 @@ class AuthService {
       await _saveUsers();
     }
     _currentUserId = guestId;
+    await _saveCurrentUser();
   }
 
   /// 회원가입. 성공 시 true, 이미 있는 아이디면 false
@@ -256,6 +274,7 @@ class AuthService {
   /// 로그아웃
   static void logout() {
     _currentUserId = null;
+    _saveCurrentUser(); // 저장된 유저 삭제
   }
 
   /// 닉네임 가져오기. 비어 있으면 친근한 기본값으로 대체해 화면에 빈칸이 보이지 않게 한다.

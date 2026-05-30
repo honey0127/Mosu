@@ -157,10 +157,14 @@ class _ExperienceCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(exp.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(exp.subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style:
               TextStyle(fontSize: 13, color: Colors.grey.shade500)),
           const SizedBox(height: 16),

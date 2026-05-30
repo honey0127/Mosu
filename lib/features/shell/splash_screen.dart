@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import '../onboarding/keyword_selection_screen.dart';
+import '../onboarding/onboarding_profile_screen.dart';
+import 'main_shell.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,16 +32,32 @@ class _SplashScreenState extends State<SplashScreen>
     _ctrl.forward();
 
     Future.delayed(const Duration(milliseconds: 2400), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, _, _) => const LoginScreen(),
-            transitionsBuilder: (_, anim, _, child) =>
-                FadeTransition(opacity: anim, child: child),
-            transitionDuration: const Duration(milliseconds: 600),
-          ),
-        );
+      if (!mounted) return;
+
+      final userId = AuthService.currentUserId;
+      final Widget next;
+
+      if (userId != null) {
+        // 이미 로그인된 유저 → 온보딩 상태에 맞는 화면으로
+        if (!AuthService.hasSelectedKeywords(userId)) {
+          next = KeywordSelectionScreen(userId: userId);
+        } else if (!AuthService.hasCompletedOnboarding(userId)) {
+          next = OnboardingProfileScreen(userId: userId);
+        } else {
+          next = const MainShell();
+        }
+      } else {
+        next = const LoginScreen();
       }
+
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, a1, a2) => next,
+          transitionsBuilder: (context, anim, a2, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 600),
+        ),
+      );
     });
   }
 

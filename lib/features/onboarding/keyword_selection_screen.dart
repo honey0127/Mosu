@@ -102,13 +102,18 @@ class _KeywordSelectionScreenState extends State<KeywordSelectionScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${_selected.length}개 선택됨  (최소 ${_minSelect}개)',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
+                      Flexible(
+                        child: Text(
+                          '${_selected.length}개 선택됨  (최소 ${_minSelect}개)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       GestureDetector(
                         onTap: () => setState(() {
                           _selected.clear();

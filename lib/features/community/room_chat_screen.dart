@@ -210,6 +210,8 @@ class _MessageBubble extends StatelessWidget {
           children: [
             Text(
               time,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
             ),
             const SizedBox(width: 6),
