@@ -1,0 +1,105 @@
+import 'dart:convert';
+import 'dart:io';
+import '../models/deco_item.dart';
+import '../models/experience.dart';
+
+/// Claude API를 호출해 경험에 맞는 방 소품을 동적으로 생성합니다.
+///
+/// ─── 설정 방법 ────────────────────────────────────────────────────────────
+/// 1. 이 파일을 복사해서 이름을 deco_ai_service.dart 로 변경
+/// 2. https://console.anthropic.com 에서 API 키 발급
+/// 3. 아래 _apiKey 값을 본인 키로 교체
+/// 4. deco_ai_service.dart 는 .gitignore 처리되어 있으므로 커밋되지 않음
+/// ──────────────────────────────────────────────────────────────────────────
+class DecoAiService {
+  static const String _apiKey = 'YOUR_ANTHROPIC_API_KEY'; // ← 여기에 키 입력
+
+  static const String _apiUrl = 'https://api.anthropic.com/v1/messages';
+  static const String _model = 'claude-haiku-4-5-20251001';
+
+  static Future<DecoItem?> generateDecoItem(Experience exp) async {
+    if (_apiKey == 'YOUR_ANTHROPIC_API_KEY') {
+      return _fallbackItem(exp);
+    }
+
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 10);
+
+      final request = await client.postUrl(Uri.parse(_apiUrl));
+      request.headers.set('x-api-key', _apiKey);
+      request.headers.set('anthropic-version', '2023-06-01');
+      request.headers.set('content-type', 'application/json');
+
+      final prompt =
+          '경험: "${exp.title}" (카테고리: ${exp.category.label}, 난이도: ${exp.difficulty.label})\n'
+          '이 경험을 완료한 유저에게 줄 방 꾸미기 소품 1개를 생성하세요.\n'
+          '반드시 아래 JSON 형식으로만 답하세요 (다른 텍스트 없이):\n'
+          '{"name":"소품이름(8자이내)","emoji":"이모지1개","slot":"object"}';
+
+      final body = jsonEncode({
+        'model': _model,
+        'max_tokens': 100,
+        'messages': [
+          {'role': 'user', 'content': prompt}
+        ],
+      });
+
+      request.write(body);
+      final response = await request.close();
+      final responseBody = await response.transform(utf8.decoder).join();
+      client.close();
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(responseBody) as Map<String, dynamic>;
+        final text =
+            ((data['content'] as List).first['text'] as String).trim();
+        final jsonStr = _extractJson(text);
+        final json = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+        return DecoItem(
+          id: 'ai_${exp.id}_${DateTime.now().millisecondsSinceEpoch}',
+          name: json['name'] as String? ?? '소품',
+          emoji: json['emoji'] as String? ?? '✨',
+          cost: 0,
+          slot: json['slot'] as String? ?? 'object',
+          hint: '${exp.title} 완료 보상',
+          isAiGenerated: true,
+        );
+      }
+    } catch (_) {}
+
+    return _fallbackItem(exp);
+  }
+
+  static DecoItem _fallbackItem(Experience exp) {
+    final (emoji, name) = switch (exp.category) {
+      ExperienceCategory.cooking    => ('🍲', '뚝배기'),
+      ExperienceCategory.exercise   => ('🏅', '메달'),
+      ExperienceCategory.travel     => ('🗺️', '지도'),
+      ExperienceCategory.social     => ('☕', '커피잔'),
+      ExperienceCategory.creative   => ('🖌️', '붓'),
+      ExperienceCategory.reading    => ('📖', '책'),
+      ExperienceCategory.meditation => ('🕯️', '초'),
+      ExperienceCategory.hobby      => ('🧩', '퍼즐'),
+      ExperienceCategory.music      => ('🎵', '악보'),
+      ExperienceCategory.nature     => ('🌿', '화분'),
+    };
+    return DecoItem(
+      id: 'fallback_${exp.category.name}_${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      emoji: emoji,
+      cost: 0,
+      slot: 'object',
+      hint: '${exp.title} 완료 보상',
+      isAiGenerated: true,
+    );
+  }
+
+  static String _extractJson(String text) {
+    final blockMatch =
+        RegExp(r'```(?:json)?\s*(\{.*?\})\s*```', dotAll: true).firstMatch(text);
+    if (blockMatch != null) return blockMatch.group(1)!;
+    final start = text.indexOf('{');
+    final end = text.lastIndexOf('}');
+    if (start != -1 &

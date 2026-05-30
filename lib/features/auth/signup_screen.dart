@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../onboarding/keyword_selection_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -53,14 +54,18 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    // 자동 로그인 후 키워드 선택 화면으로 이동
+    AuthService.login(id, pw);
+
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('회원가입 완료! 로그인해주세요 🎉'),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => KeywordSelectionScreen(userId: id),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
       ),
     );
-    Navigator.pop(context);
   }
 
   @override
@@ -196,7 +201,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: ElevatedButton(
                   onPressed: _loading ? null : _signup,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7F77DD),
+                    backgroundColor: const Color(0xFF7DB879),
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.shade200,
                     elevation: 0,
@@ -265,7 +270,7 @@ class _SignupScreenState extends State<SignupScreen> {
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(
-                color: Color(0xFF7F77DD), width: 1.5),
+                color: Color(0xFF7DB879), width: 1.5),
           ),
         ),
       );

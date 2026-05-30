@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'signup_screen.dart';
+import '../onboarding/keyword_selection_screen.dart';
 import '../onboarding/onboarding_profile_screen.dart';
 import '../shell/main_shell.dart';
 
@@ -40,15 +41,17 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // 키워드 온보딩 완료 여부 확인
-    final needsOnboarding = !AuthService.hasCompletedOnboarding(id);
+    final Widget next;
+    if (!AuthService.hasSelectedKeywords(id)) {
+      next = KeywordSelectionScreen(userId: id);
+    } else if (!AuthService.hasCompletedOnboarding(id)) {
+      next = OnboardingProfileScreen(userId: id);
+    } else {
+      next = const MainShell();
+    }
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => needsOnboarding
-            ? OnboardingProfileScreen(userId: id)
-            : const MainShell(),
-      ),
+      MaterialPageRoute(builder: (_) => next),
     );
   }
 
@@ -72,34 +75,14 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 64),
 
               // ── 로고 영역 ──────────────────────────────────────────
-              Center(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 56,
-                      height: 56,
-                      child: CustomPaint(painter: _SmallFlowerPainter()),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'M O S U',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w300,
-                        letterSpacing: 8,
-                        color: Color(0xFF9A9A9A),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'K N U',
-                      style: TextStyle(
-                        fontSize: 11,
-                        letterSpacing: 5,
-                        color: Color(0xFFB8B8B8),
-                      ),
-                    ),
-                  ],
+              const Center(
+                child: Text(
+                  '넛지',
+                  style: TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF7DB879),
+                  ),
                 ),
               ),
 
@@ -170,7 +153,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 46,
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
+                      await AuthService.loginAsGuest();
+                      if (!context.mounted) return;
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                             builder: (_) => const MainShell()),
@@ -205,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _loading ? null : _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7F77DD),
+                    backgroundColor: const Color(0xFF7DB879),
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.shade200,
                     elevation: 0,
@@ -246,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       '회원가입',
                       style: TextStyle(
-                        color: Color(0xFF7F77DD),
+                        color: Color(0xFF7DB879),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -303,62 +288,9 @@ class _LoginScreenState extends State<LoginScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-          const BorderSide(color: Color(0xFF7F77DD), width: 1.5),
+          const BorderSide(color: Color(0xFF7DB879), width: 1.5),
         ),
       ),
     );
   }
-}
-
-// ── 작은 꽃 로고 ──────────────────────────────────────────────────────────────
-class _SmallFlowerPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFB8B8B8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.round;
-
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    const petalCount = 6;
-
-    for (var i = 0; i < petalCount; i++) {
-      final angle = (i * 2 * 3.141592653589793) / petalCount - 1.5707963;
-      final r0 = 6.0;
-      final r1 = 14.0;
-      final x1 = cx + r0 * _cos(angle);
-      final y1 = cy + r0 * _sin(angle);
-      final x2 = cx + r1 * _cos(angle);
-      final y2 = cy + r1 * _sin(angle);
-
-      canvas.save();
-      canvas.translate((x1 + x2) / 2, (y1 + y2) / 2);
-      canvas.rotate(angle + 1.5707963);
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset.zero, width: 7, height: 11),
-        paint,
-      );
-      canvas.restore();
-    }
-
-    canvas.drawCircle(Offset(cx, cy), 2,
-        Paint()..color = const Color(0xFFB8B8B8));
-  }
-
-  double _cos(double a) => _c(a);
-  double _sin(double a) => _c(a - 1.5707963265358979);
-  static double _c(double x) {
-    x = x % (2 * 3.141592653589793);
-    double r = 1, t = 1;
-    for (int n = 1; n <= 10; n++) {
-      t *= -x * x / ((2 * n - 1) * (2 * n));
-      r += t;
-    }
-    return r;
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter o) => false;
 }

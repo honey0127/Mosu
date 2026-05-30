@@ -11,10 +11,4 @@
 #include <url_launcher_windows/url_launcher_windows.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
-  AppLinksPluginCApiRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("AppLinksPluginCApi"));
-  FileSelectorWindowsRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("FileSelectorWindows"));
-  UrlLauncherWindowsRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("UrlLauncherWindows"));
-}
+  AppLin

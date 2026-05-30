@@ -47,5 +47,5 @@ app.*.map.json
 # Claude Code settings
 .claude/
 
-# Nested directory with its own git repo
-/Mosu/
+# API 키 포함 파일 — 절대 커밋 금지
+lib/services/deco_ai_service.dart

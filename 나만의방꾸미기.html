@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍃 나만의 아늑한 방 꾸미기</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            color: #fff;
+            text-shadow: 2px 3px 6px rgba(0,0,0,0.25);
+            letter-spacing: 3px;
+        }
+        .header p {
+            color: rgba(255,255,255,0.88);
+            font-size: 0.82rem;
+            margin-top: 2px;
+        }
+
+        /* ── Main Layout ── */
+        .main {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 1140px;
+        }
+
+        /* ── Palette ── */
+        .palette {
+            width: 190px;
+            flex-shrink: 0;
+            background: #FFFBF0;
+            border-radius: 18px;
+            padding: 14px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+            border: 3px solid #F9A825;
+        }
+        .palette-title {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #5D4037;
+            text-align: center;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            border-bottom: 2px dashed #F9A825;
+        }
+        .cat-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .cat-tab {
+            padding: 5px 8px;
+            border: 2px solid #C8E6C9;
+            border-radius: 10px;
+            background: #F1F8E9;
+            color: #33691E;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
+        }
+        .cat-tab:hover, .cat-tab.active {
+            background: #388E3C;
+            color: #fff;
+            border-color: #2E7D32;
+        }
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+        .item-btn {
+            aspect-ratio: 1;
+            border: 2px solid #E0E0E0;
+            border-radius: 10px;
+            background: #fff;
+            font-size: 1.35rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            transition: all 0.15s;
+            padding: 2px;
+        }
+        .item-btn:hover { border-color: #66BB6A; background: #F1F8E9; transform: scale(1.06); }
+        .item-btn.selected { border-color: #F9A825; background: #FFF8E7; box-shadow: 0 0 0 2px #FFCC02; }
+        .item-btn .ilabel { font-size: 0.5rem; color: #8D6E63; line-height: 1.1; text-align: center; }
+
+        .hint-box {
+            margin-top: 10px;
+            padding: 8px;
+            background: #FFF3E0;
+            border-radius: 10px;
+            font-size: 0.67rem;
+            color: #6D4C41;
+            line-height: 1.7;
+            border: 1px dashed #FFB300;
+        }
+        .hint-box b { color: #E65100; }
+
+        /* ── Room Panel ── */
+        .room-panel {
+            flex: 1;
+            background: #FFFBF0;
+            border-radius: 18px;
+            padding: 14px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+            border: 3px solid #F9A825;
+            transition: background 0.4s;
+        }
+
+        .room-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .room-name-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #room-name-display {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #4E342E;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+        #room-name-display:hover { background: #FFF3E0; }
+        #room-name-input {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #4E342E;
+            border: 2px solid #F9A825;
+            border-radius: 8px;
+            padding: 2px 8px;
+            outline: none;
+            display: none;
+            width: 160px;
+        }
+        .edit-hint { font-size: 0.65rem; color: #BDBDBD; }
+
+        .ctrl-row {
+            display: flex;
+            gap: 6px;
+        }
+        .ctrl-btn {
+            padding: 5px 11px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: bold;
+            transition: all 0.15s;
+        }
+        .ctrl-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        .btn-undo { background: #FFE0B2; color: #BF360C; }
+        .btn-clear { background: #FFCDD2; color: #B71C1C; }
+        .btn-save { background: #C8E6C9; color: #1B5E20; }
+
+        /* ── Style row ── */
+        .style-row {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .style-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .style-label {
+            font-size: 0.72rem;
+            color: #6D4C41;
+            white-space: nowrap;
+        }
+        .swatch {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .swatch.active {
+            border-color: #F9A825;
+            transform: scale(1.15);
+            box-shadow: 0 0 0 1px #F9A825;
+        }
+
+        /* ── Room Grid ── */
+        #room-grid {
+            display: grid;
+            gap: 1px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.04);
+            cursor: crosshair;
+            user-select: none;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.55rem;
+            transition: filter 0.08s, transform 0.12s;
+            position: relative;
+        }
+        .cell:hover { filter: brightness(0.88); }
+        .cell.pop {
+            animation: pop 0.18s ease-out;
+        }
+        @keyframes pop {
+            0%   { transform: scale(1.4); }
+            100% { transform: scale(1); }
+        }
+
+        /* ── Status ── */
+        .status-bar {
+            margin-top: 8px;
+            padding: 5px 10px;
+            background: #FFF3E0;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            color: #5D4037;
+            text-align: center;
+            min-height: 26px;
+        }
+
+        /* ── Season Overlay Banner ── */
+        .season-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .season-btn {
+            padding: 4px 10px;
+            border: 2px solid #E0E0E0;
+            border-radius: 20px;
+            background: #fff;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: #555;
+        }
+        .season-btn:hover, .season-btn.active { color: #fff; border-color: transparent; }
+        .season-spring { background: #F8BBD9 !important; color: #880E4F !important; }
+        .season-summer { background: #A5D6A7 !important; color: #1B5E20 !important; }
+        .season-autumn { background: #FFCC80 !important; color: #E65100 !important; }
+        .season-winter { background: #BBDEFB !important; color: #0D47A1 !important; }
+
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🍃 나만의 아늑한 방 꾸미기</h1>
+    <p>동물의숲 스타일로 나만의 공간을 꾸며보세요 ✨</p>
+</div>
+
+<div class="main">
+
+    <!-- ░░░ PALETTE ░░░ -->
+    <div class="palette">
+        <div class="palette-title">🎒 아이템 팔레트</div>
+
+        <div class="cat-tabs" id="cat-tabs">
+            <button class="cat-tab active" data-cat="nature">🌿 자연 / 식물</button>
+            <button class="cat-tab" data-cat="furniture">🪑 가구</button>
+            <button class="cat-tab" data-cat="deco">🕯️ 소품 / 인테리어</button>
+            <button class="cat-tab" data-cat="animals">🦊 동물 / 캐릭터</button>
+            <button class="cat-tab" data-cat="special">⭐ 특별 / 마법</button>
+            <button class="cat-tab" data-cat="food">🍎 음식 / 요리</button>
+        </div>
+
+        <div class="items-grid" id="items-grid"></div>
+
+        <div class="hint-box">
+            <b>클릭</b> → 아이템 선택<br>
+            <b>방 클릭</b> → 배치<br>
+            <b>우클릭</b> → 제거<br>
+            <b>드래그</b> → 연속 배치<br>
+            <b>방 이름</b> → 클릭해서 편집
+        </div>
+    </div>
+
+    <!-- ░░░ ROOM ░░░ -->
+    <div class="room-panel" id="room-panel">
+
+        <div class="room-topbar">
+            <div class="room-name-wrap">
+                <span id="room-name-display">🏡 나의 방</span>
+                <input id="room-name-input" type="text" maxlength="20" placeholder="방 이름">
+                <span class="edit-hint">✏️</span>
+            </div>
+            <div class="ctrl-row">
+                <button class="ctrl-btn btn-undo" id="btn-undo">↩ 되돌리기</button>
+                <button class="ctrl-btn btn-clear" id="btn-clear">🗑 초기화</button>
+                <button class="ctrl-btn btn-save" id="btn-save">💾 저장</button>
+            </div>
+        </div>
+
+        <!-- Wallpaper / Floor pickers -->
+        <div class="style-row">
+            <div class="style-group">
+                <span class="style-label">🏠 벽지</span>
+                <div id="wall-swatches"></div>
+            </div>
+            <div class="style-group">
+                <span class="style-label">🟫 바닥</span>
+                <div id="floor-swatches" style="display:flex;gap:4px;"></div>
+            </div>
+        </div>
+
+        <!-- Season row -->
+        <div class="season-row" style="margin-bottom:8px;">
+            <span class="style-label">🌸 계절</span>
+            <button class="season-btn season-spring active" data-season="spring">🌸 봄</button>
+            <button class="season-btn season-summer" data-season="summer">🌞 여름</button>
+            <button class="season-btn season-autumn" data-season="autumn">🍂 가을</button>
+            <button class="season-btn season-winter" data-season="winter">❄️ 겨울</button>
+        </div>
+
+        <div id="room-grid"></div>
+
+        <div class="status-bar" id="status-bar">✨ 아이템을 선택하고 방에 배치해보세요!</div>
+
+    </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════
+const CATS = {
+    nature:    [
+        {e:'🌿',n:'고사리'},{e:'🌺',n:'꽃'},{e:'🌸',n:'벚꽃'},{e:'🌻',n:'해바라기'},
+        {e:'🌲',n:'나무'},{e:'🌵',n:'선인장'},{e:'🪴',n:'화분'},{e:'🍄',n:'버섯'},
+        {e:'🎋',n:'대나무'},{e:'🌾',n:'갈대'},{e:'🍀',n:'클로버'},{e:'🌼',n:'데이지'},
+        {e:'🌳',n:'큰 나무'},{e:'🌴',n:'야자수'},{e:'🌱',n:'새싹'},{e:'🪸',n:'산호'},
+        {e:'🍂',n:'낙엽'},{e:'🍁',n:'단풍잎'},{e:'🌿',n:'덩굴'},{e:'🎍',n:'소나무 장식'},
+    ],
+    furniture: [
+        {e:'🪵',n:'통나무 테이블'},{e:'🪑',n:'나무 의자'},{e:'🛋️',n:'소파'},{e:'🛏️',n:'침대'},
+        {e:'📚',n:'책장'},{e:'🪞',n:'거울'},{e:'🛁',n:'욕조'},{e:'🪟',n:'창문'},
+        {e:'🚪',n:'문'},{e:'🧸',n:'인형'},{e:'🎪',n:'천막'},{e:'⛺',n:'텐트'},
+        {e:'🪜',n:'사다리'},{e:'🛗',n:'엘리베이터'},{e:'🛺',n:'수레'},{e:'🪤',n:'덫'},
+    ],
+    deco: [
+        {e:'🕯️',n:'캔들'},{e:'🏺',n:'항아리'},{e:'🧺',n:'바구니'},{e:'🎨',n:'그림'},
+        {e:'🔔',n:'종'},{e:'🎐',n:'풍경'},{e:'🪔',n:'램프'},{e:'🪨',n:'돌'},
+        {e:'🌊',n:'물결'},{e:'🎎',n:'인형'},{e:'🎋',n:'대나무 장식'},{e:'🗿',n:'석상'},
+        {e:'⛲',n:'분수'},{e:'🪺',n:'새 둥지'},{e:'🪁',n:'부메랑'},{e:'🎍',n:'소나무'},
+        {e:'🏮',n:'등불'},{e:'🎑',n:'달맞이'},{e:'🧲',n:'자석'},{e:'🪬',n:'부적'},
+    ],
+    animals: [
+        {e:'🦊',n:'여우'},{e:'🐰',n:'토끼'},{e:'🦔',n:'고슴도치'},{e:'🐸',n:'개구리'},
+        {e:'🐦',n:'새'},{e:'🦋',n:'나비'},{e:'🐝',n:'꿀벌'},{e:'🐢',n:'거북이'},
+        {e:'🦎',n:'도마뱀'},{e:'🐿️',n:'다람쥐'},{e:'🦌',n:'사슴'},{e:'🐇',n:'하얀 토끼'},
+        {e:'🦡',n:'오소리'},{e:'🐾',n:'발자국'},{e:'🦜',n:'앵무새'},{e:'🪶',n:'깃털'},
+        {e:'🐛',n:'애벌레'},{e:'🦗',n:'귀뚜라미'},{e:'🪲',n:'딱정벌레'},{e:'🐞',n:'무당벌레'},
+    ],
+    special: [
+        {e:'⭐',n:'별'},{e:'🌙',n:'달'},{e:'🌈',n:'무지개'},{e:'✨',n:'반짝임'},
+        {e:'🌟',n:'빛나는 별'},{e:'💫',n:'별똥별'},{e:'🌠',n:'유성'},{e:'☁️',n:'구름'},
+        {e:'⛅',n:'흐린 하늘'},{e:'🌤️',n:'맑음'},{e:'🌧️',n:'비'},{e:'❄️',n:'눈송이'},
+        {e:'🎆',n:'불꽃놀이'},{e:'🎇',n:'sparkler'},{e:'🧨',n:'폭죽'},{e:'🪄',n:'마법 지팡이'},
+        {e:'🔮',n:'수정구슬'},{e:'🧿',n:'부적눈'},{e:'💎',n:'다이아몬드'},{e:'🌌',n:'은하수'},
+    ],
+    food: [
+        {e:'🍎',n:'사과'},{e:'🍊',n:'귤'},{e:'🍋',n:'레몬'},{e:'🍇',n:'포도'},
+        {e:'🍓',n:'딸기'},{e:'🫐',n:'블루베리'},{e:'🍒',n:'체리'},{e:'🥕',n:'당근'},
+        {e:'🌽',n:'옥수수'},{e:'🥦',n:'브로콜리'},{e:'🍵',n:'차'},{e:'🧃',n:'주스'},
+        {e:'🍰',n:'케이크'},{e:'🍪',n:'쿠키'},{e:'🧁',n:'머핀'},{e:'🍩',n:'도넛'},
+        {e:'🫖',n:'주전자'},{e:'☕',n:'커피'},{e:'🍯',n:'꿀단지'},{e:'🧀',n:'치즈'},
+    ]
+};
+
+const WALLS = [
+    {id:'cream',  color:'#FFFBF0', label:'크림'},
+    {id:'green',  color:'#E8F5E9', label:'연두'},
+    {id:'blue',   color:'#E3F2FD', label:'하늘'},
+    {id:'pink',   color:'#FCE4EC', label:'분홍'},
+    {id:'wood',   color:'#EFEBE9', label:'우드'},
+    {id:'lavender',color:'#EDE7F6',label:'라벤더'},
+    {id:'night',  color:'#1A237E', label:'밤하늘'},
+];
+
+const FLOORS = [
+    {id:'grass',  bg:'#81C784',  stripe:'#A5D6A7', label:'잔디'},
+    {id:'wood',   bg:'#A1887F',  stripe:'#8D6E63', label:'나무'},
+    {id:'stone',  bg:'#90A4AE',  stripe:'#78909C', label:'돌'},
+    {id:'sand',   bg:'#FFD54F',  stripe:'#FFCA28', label:'모래'},
+    {id:'dirt',   bg:'#8D6E63',  stripe:'#795548', label:'흙'},
+    {id:'water',  bg:'#64B5F6',  stripe:'#42A5F5', label:'물'},
+    {id:'cloud',  bg:'#ECEFF1',  stripe:'#CFD8DC', label:'구름'},
+];
+
+const SEASONS = {
+    spring: { overlay: 'rgba(255,182,193,0.12)', icon: '🌸' },
+    summer: { overlay: 'rgba(144,238,144,0.15)', icon: '🌞' },
+    autumn: { overlay: 'rgba(255,165,0,0.12)',   icon: '🍂' },
+    winter: { overlay: 'rgba(173,216,230,0.2)',  icon: '❄️' },
+};
+
+const COLS = 12;
+const ROWS = 9;
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let grid      = Array.from({length:ROWS}, () => Array(COLS).fill(null));
+let history   = [];
+let selected  = null;
+let curWall   = WALLS[0];
+let curFloor  = FLOORS[0];
+let curSeason = 'spring';
+let isDragging = false;
+let currentCat = 'nature';
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+function init() {
+    buildWallSwatches();
+    buildFloorSwatches();
+    buildGrid();
+    buildItems(currentCat);
+    setupCatTabs();
+    setupSeasonBtns();
+    setupRoomName();
+    document.getElementById('btn-undo').addEventListener('click', undo);
+    document.getElementById('btn-clear').addEventListener('click', clearRoom);
+    document.getElementById('btn-save').addEventListener('click', saveRoom);
+
+    // Seed some starter items
+    const starters = [
+        [0,0,'🌲'],[0,1,'🌸'],[0,2,'🌿'],[0,10,'🌿'],[0,11,'🌲'],
+        [8,0,'🌾'],[8,11,'🌾'],[4,0,'🪴'],[4,11,'🪴'],
+    ];
+    starters.forEach(([r,c,e]) => {
+        const item = Object.values(CATS).flat().find(x => x.e === e);
+        if (item) grid[r][c] = item;
+    });
+    renderAllCells();
+    setStatus('✨ 아이템을 선택하고 방에 배치해보세요!');
+}
+
+// ════════════════════════════════════════
+//  SWATCHES
+// ════════════════════════════════════════
+function buildWallSwatches() {
+    const c = document.getElementById('wall-swatches');
+    c.style.display = 'flex'; c.style.gap = '4px';
+    WALLS.forEach(w => {
+        const s = document.createElement('button');
+        s.className = 'swatch' + (w.id === curWall.id ? ' active' : '');
+        s.style.background = w.color;
+        s.title = w.label;
+        s.addEventListener('click', () => {
+            curWall = w;
+            document.querySelectorAll('#wall-swatches .swatch').forEach(x => x.classList.remove('active'));
+            s.classList.add('active');
+            applyWallpaper();
+        });
+        c.appendChild(s);
+    });
+}
+
+function buildFloorSwatches() {
+    const c = document.getElementById('floor-swatches');
+    FLOORS.forEach(f => {
+        const s = document.createElement('button');
+        s.className = 'swatch' + (f.id === curFloor.id ? ' active' : '');
+        s.style.background = f.bg;
+        s.title = f.label;
+        s.addEventListener('click', () => {
+            curFloor = f;
+            document.querySelectorAll('#floor-swatches .swatch').forEach(x => x.classList.remove('active'));
+            s.classList.add('active');
+            renderAllCells();
+        });
+        c.appendChild(s);
+    });
+}
+
+function applyWallpaper() {
+    const panel = document.getElementById('room-panel');
+    panel.style.background = curWall.color;
+    panel.style.boxShadow = `inset 0 0 80px ${curWall.color}, 0 6px 24px rgba(0,0,0,0.18)`;
+    if (curWall.id === 'night') {
+        panel.style.color = '#fff';
+        document.querySelector('.room-panel .style-label') && null;
+    }
+}
+
+// ════════════════════════════════════════
+//  GRID
+// ════════════════════════════════════════
+function buildGrid() {
+    const g = document.getElementById('room-grid');
+    g.style.gridTemplateColumns = `repeat(${COLS}, 50px)`;
+    g.innerHTML = '';
+
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.r = r;
+            cell.dataset.c = c;
+            cell.style.background = cellBg(r, c);
+
+            cell.addEventListener('mousedown', e => {
+                e.preventDefault();
+                isDragging = true;
+                if (e.button === 2) removeItem(r, c);
+                else placeItem(r, c);
+            });
+            cell.addEventListener('mouseover', () => {
+                if (isDragging && selected && e => e.buttons === 1) placeItem(r, c);
+            });
+            cell.addEventListener('mouseenter', e => {
+                if (isDragging && e.buttons === 1 && selected) placeItem(r, c);
+            });
+            cell.addEventListener('contextmenu', e => { e.preventDefault(); removeItem(r, c); });
+            g.appendChild(cell);
+        }
+    }
+    document.addEventListener('mouseup', () => { isDragging = false; });
+}
+
+function cellBg(r, c) {
+    // checkerboard-lite
+    const alt = (r + c) % 2 === 0 ? curFloor.bg : curFloor.stripe;
+    return alt;
+}
+
+function renderAllCells() {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(cell => {
+        const r = +cell.dataset.r, c = +cell.dataset.c;
+        cell.style.background = cellBg(r, c);
+        const item = grid[r][c];
+        cell.textContent = item ? item.e : '';
+        cell.title = item ? item.n : '';
+    });
+}
+
+function cellEl(r, c) {
+    return document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+}
+
+// ════════════════════════════════════════
+//  ACTIONS
+// ════════════════════════════════════════
+function placeItem(r, c) {
+    if (!selected) {
+        setStatus('⬅️ 먼저 아이템을 선택해 주세요!');
+        return;
+    }
+    if (grid[r][c] && grid[r][c].e === selected.e) return; // same — skip
+    saveHistory();
+    grid[r][c] = { ...selected };
+    const cell = cellEl(r, c);
+    cell.textContent = selected.e;
+    cell.title = selected.n;
+    cell.classList.remove('pop');
+    void cell.offsetWidth;
+    cell.classList.add('pop');
+    const count = grid.flat().filter(Boolean).length;
+    setStatus(`✅ "${selected.n}" 배치 완료! 총 ${count}개 아이템`);
+}
+
+function removeItem(r, c) {
+    if (!grid[r][c]) return;
+    saveHistory();
+    grid[r][c] = null;
+    const cell = cellEl(r, c);
+    cell.textContent = '';
+    cell.title = '';
+    setStatus('🗑 아이템이 제거됐어요!');
+}
+
+function saveHistory() {
+    history.push(grid.map(row => row.map(cell => cell ? { ...cell } : null)));
+    if (history.length > 40) history.shift();
+}
+
+function undo() {
+    if (!history.length) { setStatus('↩ 더 이상 되돌릴 작업이 없어요!'); return; }
+    grid = history.pop();
+    renderAllCells();
+    setStatus('↩ 한 단계 되돌렸어요!');
+}
+
+function clearRoom() {
+    if (!confirm('방을 초기화할까요? 🥺 모든 아이템이 사라져요!')) return;
+    saveHistory();
+    grid = Array.from({length:ROWS}, () => Array(COLS).fill(null));
+    renderAllCells();
+    setStatus('🌱 방이 깨끗해졌어요! 새롭게 꾸며보세요~');
+}
+
+function saveRoom() {
+    // Serialize to localStorage
+    try {
+        const data = {
+            grid: grid,
+            wallId: curWall.id,
+            floorId: curFloor.id,
+            season: curSeason,
+            name: document.getElementById('room-name-display').textContent
+        };
+        localStorage.setItem('myRoom_v1', JSON.stringify(data));
+        setStatus('💾 저장됐어요! 다음에 열어도 그대로 유지돼요 ✨');
+    } catch(e) {
+        setStatus('⚠️ 저장에 실패했어요. 다시 시도해 주세요.');
+    }
+}
+
+function loadRoom() {
+    try {
+        const raw = localStorage.getItem('myRoom_v1');
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        grid = data.grid;
+        curWall  = WALLS.find(w => w.id === data.wallId)  || WALLS[0];
+        curFloor = FLOORS.find(f => f.id === data.floorId) || FLOORS[0];
+        curSeason = data.season || 'spring';
+        if (data.name) document.getElementById('room-name-display').textContent = data.name;
+        applyWallpaper();
+        renderAllCells();
+        applySeason(curSeason);
+        setStatus('📂 저장된 방을 불러왔어요!');
+    } catch(e) { /* ignore */ }
+}
+
+// ════════════════════════════════════════
+//  ITEMS PALETTE
+// ════════════════════════════════════════
+function buildItems(cat) {
+    currentCat = cat;
+    const g = document.getElementById('items-grid');
+    g.innerHTML = '';
+    CATS[cat].forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'item-btn' + (selected && selected.e === item.e ? ' selected' : '');
+        btn.innerHTML = `<span>${item.e}</span><span class="ilabel">${item.n}</span>`;
+        btn.title = item.n;
+        btn.addEventListener('click', () => {
+            selected = item;
+            document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            setStatus(`✅ "${item.n}" 선택됨 — 방에서 배치할 곳을 클릭하세요!`);
+        });
+        g.appendChild(btn);
+    });
+}
+
+function setupCatTabs() {
+    document.querySelectorAll('.cat-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            buildItems(tab.dataset.cat);
+        });
+    });
+}
+
+// ════════════════════════════════════════
+//  SEASON
+// ════════════════════════════════════════
+function setupSeasonBtns() {
+    document.querySelectorAll('.season-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.season-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            curSeason = btn.dataset.season;
+            applySeason(curSeason);
+        });
+    });
+}
+
+function applySeason(s) {
+    const panel = document.getElementById('room-panel');
+    const ovl = SEASONS[s].overlay;
+    panel.style.boxShadow = `inset 0 0 120px ${ovl.replace('rgba','rgba')}, 0 6px 24px rgba(0,0,0,0.18)`;
+}
+
+// ════════════════════════════════════════
+//  ROOM NAME EDIT
+// ════════════════════════════════════════
+function setupRoomName() {
+    const disp  = document.getElementById('room-name-display');
+    const input = document.getElementById('room-name-input');
+
+    disp.addEventListener('click', () => {
+        input.value = disp.textContent;
+        disp.style.display = 'none';
+        input.style.display = 'inline-block';
+        input.focus();
+    });
+
+    function commit() {
+        const v = input.value.trim();
+        disp.textContent = v || '🏡 나의 방';
+        input.style.display = 'none';
+        disp.style.display = 'inline-block';
+    }
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') commit(); });
+}
+
+// ════════════════════════════════════════
+//  UTIL
+// ════════════════════════════════════════
+function setStatus(msg) {
+    document.getElementById('status-bar').textContent = msg;
+}
+
+// ════════════════════════════════════════
+//  START
+// ════════════════════════════════════════
+init();
+loadRoom();
+</script>
+</body>
+</html>

@@ -76,7 +76,7 @@ class _KeywordScreenState extends State<KeywordScreen> {
                 height: 52,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF7F77DD),
+                    backgroundColor: const Color(0xFF7DB879),
                     disabledBackgroundColor: Colors.grey.shade200,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
@@ -221,18 +221,18 @@ class _KeywordChipState extends State<_KeywordChip>
           curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           decoration: BoxDecoration(
-            color: widget.isSelected ? const Color(0xFF7F77DD) : Colors.white,
+            color: widget.isSelected ? const Color(0xFF7DB879) : Colors.white,
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
               color: widget.isSelected
-                  ? const Color(0xFF534AB7)
+                  ? const Color(0xFF5A9A4A)
                   : Colors.grey.shade200,
               width: widget.isSelected ? 1.5 : 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: widget.isSelected
-                    ? const Color(0xFF7F77DD).withValues(alpha: 0.30)
+                    ? const Color(0xFF7DB879).withValues(alpha: 0.30)
                     : Colors.black.withValues(alpha: 0.06),
                 blurRadius: widget.isSelected ? 12 : 8,
                 spreadRadius: 0,

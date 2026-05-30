@@ -14,7 +14,7 @@
         android:maxSdkVersion="32"/>
 
     <application
-        android:label="mosu"
+        android:label="넛지"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -45,4 +45,4 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
-</manifest>
+</manife

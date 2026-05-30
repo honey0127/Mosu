@@ -149,7 +149,7 @@ class HomeScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF7F77DD)
+                            color: const Color(0xFF7DB879)
                                 .withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -162,7 +162,7 @@ class HomeScreen extends StatelessWidget {
                                   style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
-                                      color: Color(0xFF534AB7))),
+                                      color: Color(0xFF5A9A4A))),
                             ],
                           ),
                         ),
@@ -281,9 +281,9 @@ class _ExpCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = isFit ? const Color(0xFF7F77DD) : const Color(0xFFD85A30);
+    final accent = isFit ? const Color(0xFF7DB879) : const Color(0xFFD85A30);
     final bg = isFit
-        ? const Color(0xFFEEEDFE)
+        ? const Color(0xFFE8F3E3)
         : const Color(0xFFFEEDE8);
 
     return Container(
@@ -455,7 +455,7 @@ class _LevelBar extends StatelessWidget {
             minHeight: 6,
             backgroundColor: Colors.grey.shade200,
             valueColor:
-            const AlwaysStoppedAnimation<Color>(Color(0xFF7F77DD)),
+            const AlwaysStoppedAnimation<Color>(Color(0xFF7DB879)),
           ),
         ),
       ],
@@ -520,7 +520,7 @@ class _CompletedCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFEEEDFE),
+              color: const Color(0xFFE8F3E3),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Center(
@@ -545,7 +545,7 @@ class _CompletedCard extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF534AB7))),
+                  color: Color(0xFF5A9A4A))),
         ],
       ),
     );

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../models/experience.dart';
 import '../../models/app_state.dart';
 import '../../models/keyword.dart';
@@ -62,14 +62,14 @@ class RecommendationScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEEEDFE),
+                      color: const Color(0xFFE8F3E3),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '${k.emoji} ${k.label}',
                       style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF7F77DD),
+                          color: Color(0xFF7DB879),
                           fontWeight: FontWeight.w500),
                     ),
                   ))
@@ -101,9 +101,9 @@ class _ExperienceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFit = cardType == _CardType.fit;
     final accent =
-    isFit ? const Color(0xFF7F77DD) : const Color(0xFFD85A30);
+    isFit ? const Color(0xFF7DB879) : const Color(0xFFD85A30);
     final bg =
-    isFit ? const Color(0xFFEEEDFE) : const Color(0xFFFAECE7);
+    isFit ? const Color(0xFFE8F3E3) : const Color(0xFFFAECE7);
 
     return Container(
       padding: const EdgeInsets.all(20),
