@@ -490,139 +490,168 @@ class _RewardDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(newItems.isNotEmpty ? '🎁' : '🎉',
-                style: const TextStyle(fontSize: 56)),
-            const SizedBox(height: 16),
-            const Text('경험 완료!',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text(exp.title,
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-
-
-            // ── AI 생성 소품 보상 ─────────────────────────────────
-            if (newDecoItem != null) ...[
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(newItems.isNotEmpty ? '🎁' : '🎉',
+                  style: const TextStyle(fontSize: 56)),
+              const SizedBox(height: 16),
+              const Text('경험 완료!',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(exp.title,
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 20),
+
+              // ── 포인트 획득 배너 ──────────────────────────────────────────
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F0FF),
+                  color: const Color(0xFFE8F3E3),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFB39DDB)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Row(
-                      children: [
-                        Text('✨', style: TextStyle(fontSize: 16)),
-                        SizedBox(width: 6),
-                        Text('새 소품 획득!',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF5E35B1))),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text(newDecoItem!.emoji,
-                            style: const TextStyle(fontSize: 36)),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(newDecoItem!.name,
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 2),
-                            Text(newDecoItem!.hint,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade500)),
-                          ],
-                        ),
-                      ],
-                    ),
+                    const Text('✨', style: TextStyle(fontSize: 20)),
+                    const SizedBox(width: 10),
+                    Text('+${exp.difficulty.points}P 획득',
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF5A9A4A))),
                   ],
                 ),
               ),
-            ],
+              const SizedBox(height: 8),
+              Text('현재 보유 포인트: ${AppState.i.points}P',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
 
-            // ── 새로 해금된 캐릭터/방 아이템 ─────────────────────
-            if (newItems.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFFCC02)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Text('🎁', style: TextStyle(fontSize: 16)),
-                        SizedBox(width: 6),
-                        Text('아이템 해금!',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF795548))),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ...newItems.map((item) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3),
-                          child: Row(
+
+              // ── AI 생성 소품 보상 ─────────────────────────────────
+              if (newDecoItem != null) ...[
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F0FF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFB39DDB)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Text('✨', style: TextStyle(fontSize: 16)),
+                          SizedBox(width: 6),
+                          Text('새 소품 획득!',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF5E35B1))),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Text(newDecoItem!.emoji,
+                              style: const TextStyle(fontSize: 36)),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.emoji,
-                                  style: const TextStyle(fontSize: 22)),
-                              const SizedBox(width: 8),
-                              Text(item.name,
+                              Text(newDecoItem!.name,
                                   style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600)),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 2),
+                              Text(newDecoItem!.hint,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500)),
                             ],
                           ),
-                        )),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // ── 새로 해금된 캐릭터/방 아이템 ─────────────────────
+              if (newItems.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFFCC02)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Text('🎁', style: TextStyle(fontSize: 16)),
+                          SizedBox(width: 6),
+                          Text('아이템 해금!',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF795548))),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...newItems.map((item) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                Text(item.emoji,
+                                    style: const TextStyle(fontSize: 22)),
+                                const SizedBox(width: 8),
+                                Text(item.name,
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+
+              // ── 확인 버튼 ─────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF7DB879),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: onClose,
+                  child: const Text('방 꾸미러 가기 →',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
-
-            const SizedBox(height: 24),
-
-            // ── 확인 버튼 ─────────────────────────────────────────
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF7DB879),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: onClose,
-                child: const Text('방 꾸미러 가기 →',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
