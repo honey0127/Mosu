@@ -566,19 +566,21 @@ class _RewardDialog extends StatelessWidget {
                           Text(newDecoItem!.emoji,
                               style: const TextStyle(fontSize: 36)),
                           const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(newDecoItem!.name,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 2),
-                              Text(newDecoItem!.hint,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500)),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(newDecoItem!.name,
+                                    style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 2),
+                                Text(newDecoItem!.hint,
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500)),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -620,10 +622,12 @@ class _RewardDialog extends StatelessWidget {
                                 Text(item.emoji,
                                     style: const TextStyle(fontSize: 22)),
                                 const SizedBox(width: 8),
-                                Text(item.name,
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600)),
+                                Expanded(
+                                  child: Text(item.name,
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600)),
+                                ),
                               ],
                             ),
                           )),
